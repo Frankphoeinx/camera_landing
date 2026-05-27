@@ -1,13 +1,14 @@
 # Camera Landing
 
-Next.js foundation for a premium landing page for outdoor solar security cameras.
+Premium landing page for a solar outdoor security camera product.
 
 ## Stack
 
 - Next.js App Router
 - React
 - TypeScript
-- Tailwind CSS
+- CSS Modules
+- GSAP
 - ESLint
 
 ## Asset folders
