@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --color-ink: #050505;
+  --color-ink-soft: #10100f;
+  --color-graphite: #1b1916;
+  --color-smoke: #d8d0c3;
+  --color-muted: #8c8376;
+  --color-amber: #d79a3a;
+  --color-gold: #f2c16b;
+  --color-line: rgba(242, 193, 107, 0.16);
+  --page-max: 1440px;
+  --content-max: 1180px;
+  --space-page: clamp(1.25rem, 3vw, 3rem);
+}
+
+@theme inline {
+  --color-background: var(--color-ink);
+  --color-foreground: var(--color-smoke);
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-smoke);
+  font-family: var(--font-sans);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+main {
+  min-height: 100vh;
+  background: var(--color-ink);
+}
+
+button,
+a {
+  font: inherit;
+}
+
+img,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(242, 193, 107, 0.28);
+  color: #fff7e6;
+}
