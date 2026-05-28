@@ -4,6 +4,8 @@ const operationPanels = [
   {
     id: "patrol",
     className: styles.operationsPanelPatrol,
+    traceClassName: styles.operationsTracePatrol,
+    markerClassName: styles.operationsMarkerPatrol,
     eyebrow: "AUTO PATROL",
     title: "Preset routes across blind zones",
     copy: "Cycles gate, driveway, garden edge, and terrace views without waiting for manual control.",
@@ -19,6 +21,8 @@ const operationPanels = [
   {
     id: "alerts",
     className: styles.operationsPanelAlerts,
+    traceClassName: styles.operationsTraceAlerts,
+    markerClassName: styles.operationsMarkerAlerts,
     eyebrow: "SMART ALERTS",
     title: "Zone-based event escalation",
     copy: "Separates driveway approach, perimeter crossing, and loitering before sending a priority alert.",
@@ -34,6 +38,8 @@ const operationPanels = [
   {
     id: "archive",
     className: styles.operationsPanelArchive,
+    traceClassName: styles.operationsTraceArchive,
+    markerClassName: styles.operationsMarkerArchive,
     eyebrow: "EVENT MEMORY",
     title: "Encrypted local and cloud history",
     copy: "Stores verified clips with timestamp, zone, subject type, and patrol state for fast review.",
@@ -45,21 +51,6 @@ const operationPanels = [
       { label: "Mode", value: "Dual" },
     ],
     tags: ["Local SD", "Cloud copy", "Timecode"],
-  },
-];
-
-const operationTraces = [
-  {
-    className: styles.operationsTracePatrol,
-    markerClassName: styles.operationsMarkerPatrol,
-  },
-  {
-    className: styles.operationsTraceAlerts,
-    markerClassName: styles.operationsMarkerAlerts,
-  },
-  {
-    className: styles.operationsTraceArchive,
-    markerClassName: styles.operationsMarkerArchive,
   },
 ];
 
@@ -76,6 +67,16 @@ export function HeroOperationsInterface() {
           data-operations-panel
           key={panel.id}
         >
+          <span
+            className={`${styles.capabilityTraceGroup} ${panel.traceClassName}`}
+            aria-hidden="true"
+          >
+            <span className={styles.capabilityTrace} data-operations-trace />
+            <span
+              className={`${styles.capabilityMarker} ${panel.markerClassName}`}
+              data-operations-marker
+            />
+          </span>
           <span className={styles.capabilitySweep} data-operations-sweep />
           <span className={styles.capabilityEyebrow}>{panel.eyebrow}</span>
           <strong className={styles.capabilityTitle}>{panel.title}</strong>
@@ -108,20 +109,6 @@ export function HeroOperationsInterface() {
 
           <span className={styles.capabilityMetric}>{panel.metric}</span>
         </section>
-      ))}
-
-      {operationTraces.map((trace) => (
-        <span
-          className={`${styles.capabilityTraceGroup} ${trace.className}`}
-          aria-hidden="true"
-          key={trace.className}
-        >
-          <span className={styles.capabilityTrace} data-operations-trace />
-          <span
-            className={`${styles.capabilityMarker} ${trace.markerClassName}`}
-            data-operations-marker
-          />
-        </span>
       ))}
     </aside>
   );

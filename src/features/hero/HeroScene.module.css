@@ -149,7 +149,11 @@
   width: min(680px, calc(100vw - (var(--hero-interface-inset) + var(--hero-interface-inset))));
   padding: var(--hero-interface-padding) 0 var(--hero-interface-padding) var(--hero-interface-padding);
   color: #fff4df;
+  filter: blur(18px);
+  opacity: 0;
   pointer-events: auto;
+  transform: translateY(28px);
+  visibility: hidden;
 }
 
 .interface::before {
@@ -567,7 +571,7 @@
   z-index: 2;
   display: grid;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   padding: 16px 18px;
   border: 1px solid rgba(242, 193, 107, 0.38);
   background:
@@ -630,45 +634,45 @@
     linear-gradient(135deg, rgba(8, 7, 5, 0.72), rgba(31, 21, 12, 0.38)),
     linear-gradient(180deg, rgba(242, 193, 107, 0.1), rgba(242, 193, 107, 0.018));
   gap: 8px;
-  max-width: min(430px, calc(100vw - 48px));
+  max-width: min(462px, calc(100vw - 48px));
   padding: 14px 16px;
 }
 
 .operationsPanel .capabilityTitle {
-  font-size: clamp(1.06rem, 1.1vw, 1.24rem);
+  font-size: clamp(1.14rem, 1.18vw, 1.34rem);
   line-height: 1.08;
 }
 
 .operationsPanel .capabilityCopy {
-  font-size: clamp(0.78rem, 0.78vw, 0.88rem);
+  font-size: clamp(0.84rem, 0.84vw, 0.96rem);
   line-height: 1.35;
 }
 
 .operationsPanel .capabilityEyebrow {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
 }
 
 .operationsPanel .capabilityMetric {
-  font-size: 0.7rem;
+  font-size: 0.74rem;
 }
 
 .operationsPanelPatrol {
   top: clamp(62px, 8dvh, 92px);
   right: clamp(42px, 5vw, 96px);
-  width: min(430px, 30vw);
+  width: min(462px, 30vw);
 }
 
 .operationsPanelAlerts {
   top: clamp(336px, 39dvh, 430px);
   right: clamp(86px, 9vw, 180px);
-  width: min(455px, 32vw);
+  width: min(475px, 32vw);
 }
 
 .operationsPanelArchive {
   right: clamp(250px, 22vw, 430px);
   bottom: clamp(42px, 6dvh, 74px);
   left: auto;
-  width: min(430px, 31vw);
+  width: min(462px, 31vw);
 }
 
 .operationsStats {
@@ -691,7 +695,7 @@
   overflow: hidden;
   color: rgba(242, 193, 107, 0.58);
   font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-size: 0.61rem;
   font-weight: 650;
   letter-spacing: 0.08em;
   line-height: 1.1;
@@ -704,7 +708,7 @@
   overflow: hidden;
   color: rgba(255, 247, 234, 0.92);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 720;
   line-height: 1.1;
   text-overflow: ellipsis;
@@ -723,7 +727,7 @@
   overflow: hidden;
   color: rgba(232, 224, 211, 0.58);
   font-family: var(--font-mono);
-  font-size: 0.6rem;
+  font-size: 0.63rem;
   font-weight: 650;
   letter-spacing: 0.08em;
   line-height: 1.1;
@@ -735,7 +739,7 @@
 .operationsMeter > strong {
   color: rgba(255, 247, 234, 0.9);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 760;
   line-height: 1;
 }
@@ -782,7 +786,7 @@
   border: 1px solid rgba(242, 193, 107, 0.16);
   color: rgba(255, 244, 222, 0.68);
   font-family: var(--font-mono);
-  font-size: 0.6rem;
+  font-size: 0.63rem;
   font-weight: 650;
   letter-spacing: 0.06em;
   line-height: 1;
@@ -1127,17 +1131,24 @@
 .capabilitySweep {
   position: absolute;
   inset: 0 auto 0 0;
+  z-index: 1;
   width: 36%;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 226, 169, 0.18), rgba(255, 255, 255, 0));
   mix-blend-mode: screen;
   pointer-events: none;
 }
 
+.capabilityPanel > :not(.capabilityTraceGroup):not(.capabilitySweep) {
+  position: relative;
+  z-index: 2;
+}
+
 .capabilityTraceGroup {
   position: absolute;
-  z-index: 1;
+  z-index: 0;
   display: block;
   pointer-events: none;
+  transform-origin: left center;
 }
 
 .capabilityTrace {
@@ -1152,44 +1163,47 @@
 }
 
 .capabilityTraceAi {
-  top: clamp(184px, 26dvh, 284px);
-  left: clamp(332px, 21vw, 430px);
+  top: 42%;
+  left: calc(100% - 1px);
   width: clamp(270px, 25vw, 520px);
   transform: rotate(-10deg);
 }
 
 .capabilityTraceNight {
-  bottom: clamp(232px, 28dvh, 334px);
-  left: clamp(480px, 36vw, 730px);
+  top: 20%;
+  left: calc(100% - 1px);
   width: clamp(112px, 11vw, 220px);
   transform: rotate(-48deg);
 }
 
 .capabilityTracePtz {
-  right: clamp(296px, 22vw, 430px);
-  bottom: clamp(268px, 34dvh, 400px);
-  width: clamp(74px, 8vw, 156px);
-  transform: rotate(-83deg);
+  top: -1px;
+  left: -1px;
+  width: clamp(116px, 18dvh, 156px);
+  transform: rotate(-94deg);
 }
 
 .operationsTracePatrol {
-  top: clamp(150px, 20dvh, 230px);
-  left: clamp(450px, 31vw, 640px);
+  top: 42%;
+  right: calc(100% - 1px);
   width: clamp(760px, 43vw, 920px);
+  transform-origin: right center;
   transform: rotate(-8deg);
 }
 
 .operationsTraceAlerts {
-  top: clamp(362px, 46dvh, 510px);
-  left: clamp(430px, 30vw, 620px);
+  top: 46%;
+  right: calc(100% - 1px);
   width: clamp(720px, 40vw, 880px);
+  transform-origin: right center;
   transform: rotate(-3deg);
 }
 
 .operationsTraceArchive {
-  top: clamp(520px, 64dvh, 690px);
-  left: clamp(400px, 28vw, 580px);
-  width: clamp(600px, 36vw, 760px);
+  top: 48%;
+  right: calc(100% - 1px);
+  width: clamp(560px, 34vw, 720px);
+  transform-origin: right center;
   transform: rotate(18deg);
 }
 
@@ -1831,6 +1845,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .interface {
+    filter: none;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+
   .visualFrame,
   .action,
   .statusPulse,

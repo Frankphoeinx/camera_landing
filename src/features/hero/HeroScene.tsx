@@ -70,7 +70,7 @@ export function HeroScene({
   poster,
   label = "Solar outdoor security camera hero",
 }: HeroSceneProps) {
-  const [scrollCueMode, setScrollCueMode] = useState<ScrollCueMode>("down");
+  const [scrollCueMode, setScrollCueMode] = useState<ScrollCueMode>("hidden");
   const rootRef = useRef<HTMLElement>(null);
   const visualFrameRef = useRef<HTMLDivElement>(null);
   const cinematicScrimRef = useRef<HTMLDivElement>(null);
@@ -1624,6 +1624,10 @@ export function HeroScene({
             clearProps: "all",
           },
         );
+        gsap.set(select("[data-hud-root]"), {
+          autoAlpha: 1,
+          clearProps: "filter,transform",
+        });
         gsap.set(
           select(
             "[data-pulse-dot], [data-scan-line], [data-cta-sheen], [data-status-sweep], [data-capability-root], [data-operations-root], [data-final-root]",
