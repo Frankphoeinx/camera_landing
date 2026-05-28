@@ -4,18 +4,44 @@ import { useEffect, useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { HeroCapabilityInterface } from "./HeroCapabilityInterface";
+import { HeroFinalInterface } from "./HeroFinalInterface";
 import { HeroIntroInterface } from "./HeroIntroInterface";
+import { HeroOperationsInterface } from "./HeroOperationsInterface";
 import styles from "./HeroScene.module.css";
 
 gsap.registerPlugin(useGSAP);
 
-const HERO_VIDEO_STOP_TIME_SECONDS = 4;
+const HERO_CAPABILITY_TIME_SECONDS = 4;
+const HERO_OPERATIONS_TIME_SECONDS = 10.5;
+const HERO_FINAL_TIME_SECONDS = 14;
+const REVERSE_TO_START_FALLBACK_SECONDS = 4.05;
+const REVERSE_TO_CAPABILITY_FALLBACK_SECONDS = 6.55;
+const REVERSE_TO_OPERATIONS_FALLBACK_SECONDS = 3.55;
 const SCROLL_DIRECTION_THRESHOLD = 4;
 const START_FRAME_EPSILON_SECONDS = 0.05;
+const VIDEO_LAYER_CROSSFADE_SECONDS = 0.22;
+
+type HeroVideoStep =
+  | "start"
+  | "playingToCapability"
+  | "capability"
+  | "playingToOperations"
+  | "operations"
+  | "playingToFinal"
+  | "final"
+  | "reversingToStart"
+  | "reversingToCapability"
+  | "reversingToOperations";
+
+type ForwardTarget = "capability" | "operations" | "final";
+type ReverseTarget = "start" | "capability" | "operations";
+type DetailOverlayKind = "capability" | "operations" | "final";
 
 type HeroSceneProps = {
   src: string;
   reverseSrc: string;
+  reverseToCapabilitySrc: string;
+  reverseToOperationsSrc: string;
   poster?: string;
   label?: string;
 };
@@ -23,6 +49,8 @@ type HeroSceneProps = {
 export function HeroScene({
   src,
   reverseSrc,
+  reverseToCapabilitySrc,
+  reverseToOperationsSrc,
   poster,
   label = "Solar outdoor security camera hero",
 }: HeroSceneProps) {
@@ -31,32 +59,67 @@ export function HeroScene({
   const cinematicScrimRef = useRef<HTMLDivElement>(null);
   const forwardVideoRef = useRef<HTMLVideoElement>(null);
   const reverseVideoRef = useRef<HTMLVideoElement>(null);
-  const videoStepRef = useRef<"start" | "forward" | "end" | "reverse">(
-    "start",
-  );
+  const reverseToCapabilityVideoRef = useRef<HTMLVideoElement>(null);
+  const reverseToOperationsVideoRef = useRef<HTMLVideoElement>(null);
+  const videoStepRef = useRef<HeroVideoStep>("start");
 
   useEffect(() => {
     const forwardVideoElement = forwardVideoRef.current;
     const reverseVideoElement = reverseVideoRef.current;
+    const reverseToCapabilityVideoElement =
+      reverseToCapabilityVideoRef.current;
+    const reverseToOperationsVideoElement =
+      reverseToOperationsVideoRef.current;
 
-    if (!forwardVideoElement || !reverseVideoElement) {
+    if (
+      !forwardVideoElement ||
+      !reverseVideoElement ||
+      !reverseToCapabilityVideoElement ||
+      !reverseToOperationsVideoElement
+    ) {
       return;
     }
 
     const forwardVideo = forwardVideoElement;
-    const reverseVideo = reverseVideoElement;
+    const reverseToStartVideo = reverseVideoElement;
+    const reverseToCapabilityVideo = reverseToCapabilityVideoElement;
+    const reverseToOperationsVideo = reverseToOperationsVideoElement;
+    const videoLayers = [
+      forwardVideo,
+      reverseToStartVideo,
+      reverseToCapabilityVideo,
+      reverseToOperationsVideo,
+    ];
     const cinematicScrim = cinematicScrimRef.current;
     const root = rootRef.current;
     const select = root ? gsap.utils.selector(root) : null;
     const capabilityRoot = root?.querySelector<HTMLElement>(
       "[data-capability-root]",
     );
+    const operationsRoot = root?.querySelector<HTMLElement>(
+      "[data-operations-root]",
+    );
+    const finalRoot = root?.querySelector<HTMLElement>("[data-final-root]");
     const hudRoot = rootRef.current?.querySelector<HTMLElement>(
       "[data-hud-root]",
     );
+    const detailOverlayRoots: Record<
+      DetailOverlayKind,
+      HTMLElement | null | undefined
+    > = {
+      capability: capabilityRoot,
+      operations: operationsRoot,
+      final: finalRoot,
+    };
+    const isDetailOverlayVisible: Record<DetailOverlayKind, boolean> = {
+      capability: false,
+      operations: false,
+      final: false,
+    };
     let isDisposed = false;
     let isHudHidden = false;
-    let isCapabilityVisible = false;
+    let forwardTarget: ForwardTarget | null = null;
+    let reverseTarget: ReverseTarget | null = null;
     let lastScrollY = window.scrollY;
     let lastTouchY: number | null = null;
     let forwardStopFrameId: number | null = null;
@@ -85,12 +148,23 @@ export function HeroScene({
       reverseStopFrameId = null;
     };
 
-    const getStopTime = (video: HTMLVideoElement) => {
-      if (Number.isFinite(video.duration) && video.duration > 0) {
-        return Math.min(HERO_VIDEO_STOP_TIME_SECONDS, video.duration);
+    const getForwardStopTime = (targetTime: number) => {
+      if (Number.isFinite(forwardVideo.duration) && forwardVideo.duration > 0) {
+        return Math.min(targetTime, forwardVideo.duration);
       }
 
-      return HERO_VIDEO_STOP_TIME_SECONDS;
+      return targetTime;
+    };
+
+    const getReverseStopTime = (
+      video: HTMLVideoElement,
+      fallbackDuration: number,
+    ) => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        return video.duration;
+      }
+
+      return fallbackDuration;
     };
 
     const lockPageScroll = () => {
@@ -127,24 +201,138 @@ export function HeroScene({
       lastScrollY = lockedScrollY;
     };
 
-    const showForwardVideo = () => {
-      gsap.set(forwardVideo, { opacity: 1 });
-      gsap.set(reverseVideo, { opacity: 0 });
+    const showVideoLayer = (activeVideo: HTMLVideoElement) => {
+      gsap.killTweensOf(videoLayers);
+      gsap.set(videoLayers, { opacity: 0 });
+      gsap.set(activeVideo, { opacity: 1 });
     };
 
-    const showReverseVideo = () => {
-      gsap.set(reverseVideo, { opacity: 1 });
-      gsap.set(forwardVideo, { opacity: 0 });
+    const showForwardVideo = () => showVideoLayer(forwardVideo);
+
+    const preloadVideoSource = (href: string) => {
+      const absoluteHref = new URL(href, window.location.href).href;
+      const existingPreloadLink = Array.from(
+        document.head.querySelectorAll<HTMLLinkElement>(
+          'link[rel="preload"][as="video"]',
+        ),
+      ).find((link) => link.href === absoluteHref);
+
+      if (existingPreloadLink) {
+        return () => undefined;
+      }
+
+      const preloadLink = document.createElement("link");
+      preloadLink.rel = "preload";
+      preloadLink.as = "video";
+      preloadLink.href = href;
+      preloadLink.type = "video/mp4";
+      preloadLink.crossOrigin = "anonymous";
+      preloadLink.setAttribute("fetchpriority", "high");
+      document.head.append(preloadLink);
+
+      return () => preloadLink.remove();
     };
 
-    const prepareForwardStartFrame = () => {
+    const warmVideoElement = (video: HTMLVideoElement) => {
+      video.preload = "auto";
+      video.load();
+    };
+
+    const waitForVideoFrameReady = (video: HTMLVideoElement) =>
+      new Promise<void>((resolve) => {
+        let timeoutId: number | null = null;
+        let firstFrameId: number | null = null;
+        let secondFrameId: number | null = null;
+        let didResolve = false;
+
+        const cleanup = () => {
+          video.removeEventListener("canplay", settle);
+          video.removeEventListener("loadeddata", settle);
+          video.removeEventListener("seeked", settle);
+
+          if (timeoutId !== null) {
+            window.clearTimeout(timeoutId);
+          }
+
+          if (firstFrameId !== null) {
+            window.cancelAnimationFrame(firstFrameId);
+          }
+
+          if (secondFrameId !== null) {
+            window.cancelAnimationFrame(secondFrameId);
+          }
+        };
+
+        const resolveAfterPaint = () => {
+          firstFrameId = window.requestAnimationFrame(() => {
+            secondFrameId = window.requestAnimationFrame(() => resolve());
+          });
+        };
+
+        function settle() {
+          if (didResolve) {
+            return;
+          }
+
+          didResolve = true;
+          cleanup();
+          resolveAfterPaint();
+        }
+
+        if (!video.seeking && video.readyState >= video.HAVE_CURRENT_DATA) {
+          settle();
+          return;
+        }
+
+        video.addEventListener("canplay", settle, { once: true });
+        video.addEventListener("loadeddata", settle, { once: true });
+        video.addEventListener("seeked", settle, { once: true });
+        timeoutId = window.setTimeout(settle, 420);
+      });
+
+    const crossfadeVideoLayer = (
+      fromVideo: HTMLVideoElement,
+      toVideo: HTMLVideoElement,
+    ) =>
+      new Promise<void>((resolve) => {
+        gsap.killTweensOf(videoLayers);
+        gsap.set(videoLayers, { opacity: 0 });
+        gsap.set([fromVideo, toVideo], { opacity: 1 });
+        gsap.to(fromVideo, {
+          duration: VIDEO_LAYER_CROSSFADE_SECONDS,
+          ease: "power2.out",
+          opacity: 0,
+          onComplete: () => {
+            resolve();
+          },
+        });
+      });
+
+    const prepareForwardFrame = (targetTime: number) => {
       forwardVideo.pause();
+
+      const nextTime = getForwardStopTime(targetTime);
 
       if (
         forwardVideo.readyState >= forwardVideo.HAVE_METADATA &&
-        Math.abs(forwardVideo.currentTime) > START_FRAME_EPSILON_SECONDS
+        Math.abs(forwardVideo.currentTime - nextTime) >
+          START_FRAME_EPSILON_SECONDS
       ) {
-        forwardVideo.currentTime = 0;
+        forwardVideo.currentTime = nextTime;
+      }
+    };
+
+    const prepareReverseFrame = (
+      video: HTMLVideoElement,
+      targetTime = 0,
+    ) => {
+      video.pause();
+
+      if (
+        video.readyState >= video.HAVE_METADATA &&
+        Math.abs(video.currentTime - targetTime) > START_FRAME_EPSILON_SECONDS
+      ) {
+        video.currentTime = targetTime;
       }
     };
 
@@ -171,42 +359,52 @@ export function HeroScene({
       gsap.killTweensOf(getHudRevealTargets());
     };
 
-    const getCapabilityTargets = () => {
+    const getDetailOverlayTargets = (kind: DetailOverlayKind) => {
+      const overlayRoot = detailOverlayRoots[kind];
+
       if (!select) {
-        return [capabilityRoot].filter(Boolean) as Element[];
+        return [overlayRoot].filter(Boolean) as Element[];
       }
 
       return [
-        capabilityRoot,
-        ...select("[data-capability-panel]"),
-        ...select("[data-capability-trace]"),
-        ...select("[data-capability-marker]"),
-        ...select("[data-capability-sweep]"),
+        overlayRoot,
+        ...select(`[data-${kind}-panel]`),
+        ...select(`[data-${kind}-trace]`),
+        ...select(`[data-${kind}-marker]`),
+        ...select(`[data-${kind}-sweep]`),
       ].filter(Boolean) as Element[];
     };
 
-    const killCapabilityTweens = () => {
-      gsap.killTweensOf(getCapabilityTargets());
+    const killDetailOverlayTweens = (kind: DetailOverlayKind) => {
+      gsap.killTweensOf(getDetailOverlayTargets(kind));
     };
 
-    const showCapabilityOverlay = () => {
-      if (!capabilityRoot || !select || isCapabilityVisible) {
+    const killAllDetailOverlayTweens = () => {
+      killDetailOverlayTweens("capability");
+      killDetailOverlayTweens("operations");
+      killDetailOverlayTweens("final");
+    };
+
+    const showDetailOverlay = (kind: DetailOverlayKind) => {
+      const overlayRoot = detailOverlayRoots[kind];
+
+      if (!overlayRoot || !select || isDetailOverlayVisible[kind]) {
         return;
       }
 
-      isCapabilityVisible = true;
-      killCapabilityTweens();
+      isDetailOverlayVisible[kind] = true;
+      killDetailOverlayTweens(kind);
 
       const reducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
-      const panels = select("[data-capability-panel]");
-      const traces = select("[data-capability-trace]");
-      const markers = select("[data-capability-marker]");
-      const sweeps = select("[data-capability-sweep]");
+      const panels = select(`[data-${kind}-panel]`);
+      const traces = select(`[data-${kind}-trace]`);
+      const markers = select(`[data-${kind}-marker]`);
+      const sweeps = select(`[data-${kind}-sweep]`);
 
       if (reducedMotion) {
-        gsap.set([capabilityRoot, ...panels, ...traces, ...markers], {
+        gsap.set([overlayRoot, ...panels, ...traces, ...markers], {
           autoAlpha: 1,
           clearProps: "transform,filter",
         });
@@ -214,7 +412,7 @@ export function HeroScene({
         return;
       }
 
-      gsap.set(capabilityRoot, { autoAlpha: 1 });
+      gsap.set(overlayRoot, { autoAlpha: 1 });
       gsap.set(panels, {
         autoAlpha: 0,
         filter: "blur(14px)",
@@ -235,13 +433,13 @@ export function HeroScene({
         xPercent: -120,
       });
 
-      const capabilityTimeline = gsap.timeline({
+      const detailTimeline = gsap.timeline({
         defaults: {
           ease: "power3.out",
         },
       });
 
-      capabilityTimeline
+      detailTimeline
         .to(
           panels,
           {
@@ -292,22 +490,29 @@ export function HeroScene({
         });
     };
 
-    const hideCapabilityOverlay = () => {
-      if (!capabilityRoot || !isCapabilityVisible) {
+    const hideDetailOverlay = (kind: DetailOverlayKind) => {
+      const overlayRoot = detailOverlayRoots[kind];
+
+      if (!overlayRoot || !isDetailOverlayVisible[kind]) {
         return;
       }
 
-      isCapabilityVisible = false;
-      killCapabilityTweens();
-      gsap.to(capabilityRoot, {
+      isDetailOverlayVisible[kind] = false;
+      killDetailOverlayTweens(kind);
+      gsap.to(overlayRoot, {
         autoAlpha: 0,
         duration: 0.34,
         ease: "power2.in",
         y: -10,
         onComplete: () => {
-          gsap.set(capabilityRoot, { clearProps: "transform" });
+          gsap.set(overlayRoot, { clearProps: "transform" });
         },
       });
+    };
+
+    const hideAllDetailOverlays = () => {
+      hideDetailOverlay("capability");
+      hideDetailOverlay("operations");
     };
 
     const hideHud = () => {
@@ -551,16 +756,134 @@ export function HeroScene({
         );
     };
 
+    const settleAtCapability = (
+      fromVideo: HTMLVideoElement,
+      expectedStep: HeroVideoStep,
+    ) => {
+      prepareReverseFrame(reverseToStartVideo, 0);
+
+      void waitForVideoFrameReady(reverseToStartVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== expectedStep) {
+          return;
+        }
+
+        void crossfadeVideoLayer(fromVideo, reverseToStartVideo).then(() => {
+          if (isDisposed || videoStepRef.current !== expectedStep) {
+            return;
+          }
+
+          videoStepRef.current = "capability";
+          prepareForwardFrame(HERO_CAPABILITY_TIME_SECONDS);
+          showDetailOverlay("capability");
+          unlockPageScroll();
+        });
+      });
+    };
+
+    const settleAtOperations = (
+      fromVideo: HTMLVideoElement,
+      expectedStep: HeroVideoStep,
+    ) => {
+      prepareReverseFrame(reverseToCapabilityVideo, 0);
+
+      void waitForVideoFrameReady(reverseToCapabilityVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== expectedStep) {
+          return;
+        }
+
+        void crossfadeVideoLayer(fromVideo, reverseToCapabilityVideo).then(
+          () => {
+            if (isDisposed || videoStepRef.current !== expectedStep) {
+              return;
+            }
+
+            videoStepRef.current = "operations";
+            prepareForwardFrame(HERO_OPERATIONS_TIME_SECONDS);
+            showDetailOverlay("operations");
+            unlockPageScroll();
+          },
+        );
+      });
+    };
+
+    const settleAtFinal = (expectedStep: HeroVideoStep) => {
+      prepareReverseFrame(reverseToOperationsVideo, 0);
+
+      void waitForVideoFrameReady(reverseToOperationsVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== expectedStep) {
+          return;
+        }
+
+        void crossfadeVideoLayer(forwardVideo, reverseToOperationsVideo).then(
+          () => {
+            if (isDisposed || videoStepRef.current !== expectedStep) {
+              return;
+            }
+
+            videoStepRef.current = "final";
+            prepareForwardFrame(HERO_FINAL_TIME_SECONDS);
+            showDetailOverlay("final");
+            unlockPageScroll();
+          },
+        );
+      });
+    };
+
+    const settleAtStart = (
+      fromVideo: HTMLVideoElement,
+      expectedStep: HeroVideoStep,
+    ) => {
+      prepareForwardFrame(0);
+
+      void waitForVideoFrameReady(forwardVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== expectedStep) {
+          return;
+        }
+
+        void crossfadeVideoLayer(fromVideo, forwardVideo).then(() => {
+          if (isDisposed || videoStepRef.current !== expectedStep) {
+            return;
+          }
+
+          videoStepRef.current = "start";
+          showHud();
+          unlockPageScroll();
+        });
+      });
+    };
+
     const pauseForwardAtStopTime = () => {
-      const stopTime = getStopTime(forwardVideo);
+      if (forwardTarget === null) {
+        return;
+      }
+
+      const stopTime = getForwardStopTime(
+        forwardTarget === "capability"
+          ? HERO_CAPABILITY_TIME_SECONDS
+          : forwardTarget === "operations"
+            ? HERO_OPERATIONS_TIME_SECONDS
+            : HERO_FINAL_TIME_SECONDS,
+      );
 
       if (forwardVideo.currentTime >= stopTime) {
+        const completedTarget = forwardTarget;
+
         forwardVideo.pause();
         forwardVideo.currentTime = stopTime;
-        videoStepRef.current = "end";
+        forwardTarget = null;
         cancelForwardStopMonitor();
-        showCapabilityOverlay();
-        unlockPageScroll();
+
+        if (completedTarget === "capability") {
+          settleAtCapability(forwardVideo, "playingToCapability");
+          return;
+        }
+
+        if (completedTarget === "operations") {
+          settleAtOperations(forwardVideo, "playingToOperations");
+          return;
+        }
+
+        settleAtFinal("playingToFinal");
         return;
       }
 
@@ -573,13 +896,18 @@ export function HeroScene({
       }
 
       forwardVideo.pause();
-      reverseVideo.pause();
+      reverseToStartVideo.pause();
+      reverseToCapabilityVideo.pause();
+      reverseToOperationsVideo.pause();
       forwardVideo.currentTime = 0;
-      reverseVideo.currentTime = 0;
+      reverseToStartVideo.currentTime = 0;
+      reverseToCapabilityVideo.currentTime = 0;
+      reverseToOperationsVideo.currentTime = 0;
       showForwardVideo();
     };
 
-    const startForwardStopMonitor = () => {
+    const startForwardStopMonitor = (target: ForwardTarget) => {
+      forwardTarget = target;
       cancelForwardStopMonitor();
       forwardStopFrameId = window.requestAnimationFrame(
         pauseForwardAtStopTime,
@@ -587,37 +915,46 @@ export function HeroScene({
     };
 
     const pauseReverseAtStopTime = () => {
-      const stopTime = getStopTime(reverseVideo);
+      if (reverseTarget === null) {
+        return;
+      }
 
-      if (reverseVideo.currentTime >= stopTime) {
-        reverseVideo.pause();
-        reverseVideo.currentTime = stopTime;
-        prepareForwardStartFrame();
+      const activeReverseVideo =
+        reverseTarget === "start"
+          ? reverseToStartVideo
+          : reverseTarget === "capability"
+            ? reverseToCapabilityVideo
+            : reverseToOperationsVideo;
+      const fallbackDuration =
+        reverseTarget === "start"
+          ? REVERSE_TO_START_FALLBACK_SECONDS
+          : reverseTarget === "capability"
+            ? REVERSE_TO_CAPABILITY_FALLBACK_SECONDS
+            : REVERSE_TO_OPERATIONS_FALLBACK_SECONDS;
+      const stopTime = getReverseStopTime(
+        activeReverseVideo,
+        fallbackDuration,
+      );
 
-        if (forwardVideo.seeking) {
-          forwardVideo.addEventListener(
-            "seeked",
-            () => {
-              if (isDisposed) {
-                return;
-              }
+      if (activeReverseVideo.currentTime >= stopTime) {
+        const completedTarget = reverseTarget;
 
-              showForwardVideo();
-              videoStepRef.current = "start";
-              cancelReverseStopMonitor();
-              showHud();
-              unlockPageScroll();
-            },
-            { once: true },
-          );
+        activeReverseVideo.pause();
+        activeReverseVideo.currentTime = stopTime;
+        reverseTarget = null;
+        cancelReverseStopMonitor();
+
+        if (completedTarget === "start") {
+          settleAtStart(activeReverseVideo, "reversingToStart");
           return;
         }
 
-        showForwardVideo();
-        videoStepRef.current = "start";
-        cancelReverseStopMonitor();
-        showHud();
-        unlockPageScroll();
+        if (completedTarget === "capability") {
+          settleAtCapability(activeReverseVideo, "reversingToCapability");
+          return;
+        }
+
+        settleAtOperations(activeReverseVideo, "reversingToOperations");
         return;
       }
 
@@ -626,7 +963,8 @@ export function HeroScene({
       );
     };
 
-    const startReverseStopMonitor = () => {
+    const startReverseStopMonitor = (target: ReverseTarget) => {
+      reverseTarget = target;
       cancelReverseStopMonitor();
       reverseStopFrameId = window.requestAnimationFrame(
         pauseReverseAtStopTime,
@@ -653,46 +991,40 @@ export function HeroScene({
       window.addEventListener("keydown", handleKeyDown);
     };
 
-    const playToEnd = () => {
-      if (
-        videoStepRef.current === "end" ||
-        videoStepRef.current === "forward"
-      ) {
+    const playForwardToCapability = () => {
+      if (videoStepRef.current !== "start") {
         return;
       }
 
-      const previousVideoStep = videoStepRef.current;
-
-      videoStepRef.current = "forward";
+      videoStepRef.current = "playingToCapability";
       lockPageScroll();
-      hideCapabilityOverlay();
+      hideAllDetailOverlays();
       cancelReverseStopMonitor();
-      reverseVideo.pause();
+      reverseToStartVideo.pause();
+      reverseToCapabilityVideo.pause();
+      reverseToOperationsVideo.pause();
       forwardVideo.removeEventListener("loadedmetadata", switchToStartFrame);
-      reverseVideo.removeEventListener("loadedmetadata", switchToStartFrame);
+      reverseToStartVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToCapabilityVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToOperationsVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
 
-      if (
-        reverseVideo.readyState >= reverseVideo.HAVE_METADATA &&
-        forwardVideo.readyState >= forwardVideo.HAVE_METADATA
-      ) {
-        if (previousVideoStep === "reverse") {
-          const reverseStopTime = getStopTime(reverseVideo);
-          forwardVideo.currentTime = Math.max(
-            0,
-            reverseStopTime - reverseVideo.currentTime,
-          );
-        } else {
-          forwardVideo.currentTime = 0;
-        }
-      }
-
+      prepareForwardFrame(0);
       showForwardVideo();
 
       void forwardVideo
         .play()
         .then(() => {
           if (!isDisposed) {
-            startForwardStopMonitor();
+            startForwardStopMonitor("capability");
           }
         })
         .catch((error: unknown) => {
@@ -707,54 +1039,261 @@ export function HeroScene({
         });
     };
 
-    const playReverseToStart = () => {
-      if (
-        videoStepRef.current === "start" ||
-        videoStepRef.current === "reverse"
-      ) {
+    const playForwardToOperations = () => {
+      if (videoStepRef.current !== "capability") {
         return;
       }
 
-      videoStepRef.current = "reverse";
+      videoStepRef.current = "playingToOperations";
       lockPageScroll();
-      hideCapabilityOverlay();
-      cancelForwardStopMonitor();
-      forwardVideo.pause();
+      hideDetailOverlay("capability");
+      cancelReverseStopMonitor();
+      reverseToStartVideo.pause();
+      reverseToCapabilityVideo.pause();
+      reverseToOperationsVideo.pause();
       forwardVideo.removeEventListener("loadedmetadata", switchToStartFrame);
-      reverseVideo.removeEventListener("loadedmetadata", switchToStartFrame);
+      reverseToStartVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToCapabilityVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToOperationsVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
 
-      if (
-        forwardVideo.readyState >= forwardVideo.HAVE_METADATA &&
-        reverseVideo.readyState >= reverseVideo.HAVE_METADATA
-      ) {
-        const forwardStopTime = getStopTime(forwardVideo);
-        reverseVideo.currentTime = Math.max(
-          0,
-          forwardStopTime - forwardVideo.currentTime,
-        );
-      }
+      prepareForwardFrame(HERO_CAPABILITY_TIME_SECONDS);
 
-      showReverseVideo();
-      prepareForwardStartFrame();
+      void waitForVideoFrameReady(forwardVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== "playingToOperations") {
+          return;
+        }
 
-      void reverseVideo
-        .play()
-        .then(() => {
-          if (!isDisposed) {
-            startReverseStopMonitor();
-          }
-        })
-        .catch((error: unknown) => {
-          if (isDisposed) {
+        void crossfadeVideoLayer(reverseToStartVideo, forwardVideo).then(() => {
+          if (isDisposed || videoStepRef.current !== "playingToOperations") {
             return;
           }
 
-          videoStepRef.current = "end";
-          unlockPageScroll();
-          showForwardVideo();
-          showCapabilityOverlay();
-          console.warn("Hero reverse video playback could not start.", error);
+          void forwardVideo
+            .play()
+            .then(() => {
+              if (!isDisposed) {
+                startForwardStopMonitor("operations");
+              }
+            })
+            .catch((error: unknown) => {
+              if (isDisposed) {
+                return;
+              }
+
+              videoStepRef.current = "capability";
+              unlockPageScroll();
+              showVideoLayer(reverseToStartVideo);
+              showDetailOverlay("capability");
+              console.warn("Hero video playback could not continue.", error);
+            });
         });
+      });
+    };
+
+    const playForwardToFinal = () => {
+      if (videoStepRef.current !== "operations") {
+        return;
+      }
+
+      videoStepRef.current = "playingToFinal";
+      lockPageScroll();
+      hideDetailOverlay("operations");
+      cancelReverseStopMonitor();
+      reverseToStartVideo.pause();
+      reverseToCapabilityVideo.pause();
+      reverseToOperationsVideo.pause();
+      forwardVideo.removeEventListener("loadedmetadata", switchToStartFrame);
+      reverseToStartVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToCapabilityVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToOperationsVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+
+      prepareForwardFrame(HERO_OPERATIONS_TIME_SECONDS);
+
+      void waitForVideoFrameReady(forwardVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== "playingToFinal") {
+          return;
+        }
+
+        void crossfadeVideoLayer(reverseToCapabilityVideo, forwardVideo).then(
+          () => {
+            if (isDisposed || videoStepRef.current !== "playingToFinal") {
+              return;
+            }
+
+            void forwardVideo
+              .play()
+              .then(() => {
+                if (!isDisposed) {
+                  startForwardStopMonitor("final");
+                }
+              })
+              .catch((error: unknown) => {
+                if (isDisposed) {
+                  return;
+                }
+
+                videoStepRef.current = "operations";
+                unlockPageScroll();
+                showVideoLayer(reverseToCapabilityVideo);
+                showDetailOverlay("operations");
+                console.warn(
+                  "Hero video playback could not reach final frame.",
+                  error,
+                );
+              });
+          },
+        );
+      });
+    };
+
+    const playReverseToStart = () => {
+      if (videoStepRef.current !== "capability") {
+        return;
+      }
+
+      videoStepRef.current = "reversingToStart";
+      lockPageScroll();
+      hideDetailOverlay("capability");
+      cancelForwardStopMonitor();
+      forwardVideo.pause();
+      reverseToCapabilityVideo.pause();
+      reverseToOperationsVideo.pause();
+      prepareReverseFrame(reverseToStartVideo, 0);
+
+      void waitForVideoFrameReady(reverseToStartVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== "reversingToStart") {
+          return;
+        }
+
+        showVideoLayer(reverseToStartVideo);
+
+        void reverseToStartVideo
+          .play()
+          .then(() => {
+            if (!isDisposed) {
+              startReverseStopMonitor("start");
+            }
+          })
+          .catch((error: unknown) => {
+            if (isDisposed) {
+              return;
+            }
+
+            videoStepRef.current = "capability";
+            unlockPageScroll();
+            showVideoLayer(reverseToStartVideo);
+            showDetailOverlay("capability");
+            console.warn("Hero reverse video playback could not start.", error);
+          });
+      });
+    };
+
+    const playReverseToCapability = () => {
+      if (videoStepRef.current !== "operations") {
+        return;
+      }
+
+      videoStepRef.current = "reversingToCapability";
+      lockPageScroll();
+      hideDetailOverlay("operations");
+      cancelForwardStopMonitor();
+      forwardVideo.pause();
+      reverseToStartVideo.pause();
+      reverseToOperationsVideo.pause();
+      prepareReverseFrame(reverseToCapabilityVideo, 0);
+
+      void waitForVideoFrameReady(reverseToCapabilityVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== "reversingToCapability") {
+          return;
+        }
+
+        showVideoLayer(reverseToCapabilityVideo);
+
+        void reverseToCapabilityVideo
+          .play()
+          .then(() => {
+            if (!isDisposed) {
+              startReverseStopMonitor("capability");
+            }
+          })
+          .catch((error: unknown) => {
+            if (isDisposed) {
+              return;
+            }
+
+            videoStepRef.current = "operations";
+            unlockPageScroll();
+            showVideoLayer(reverseToCapabilityVideo);
+            showDetailOverlay("operations");
+            console.warn(
+              "Hero reverse video playback could not continue.",
+              error,
+            );
+          });
+      });
+    };
+
+    const playReverseToOperations = () => {
+      if (videoStepRef.current !== "final") {
+        return;
+      }
+
+      videoStepRef.current = "reversingToOperations";
+      lockPageScroll();
+      hideDetailOverlay("final");
+      cancelForwardStopMonitor();
+      forwardVideo.pause();
+      reverseToStartVideo.pause();
+      reverseToCapabilityVideo.pause();
+      prepareReverseFrame(reverseToOperationsVideo, 0);
+
+      void waitForVideoFrameReady(reverseToOperationsVideo).then(() => {
+        if (isDisposed || videoStepRef.current !== "reversingToOperations") {
+          return;
+        }
+
+        showVideoLayer(reverseToOperationsVideo);
+
+        void reverseToOperationsVideo
+          .play()
+          .then(() => {
+            if (!isDisposed) {
+              startReverseStopMonitor("operations");
+            }
+          })
+          .catch((error: unknown) => {
+            if (isDisposed) {
+              return;
+            }
+
+            videoStepRef.current = "final";
+            unlockPageScroll();
+            showVideoLayer(reverseToOperationsVideo);
+            showDetailOverlay("final");
+            console.warn(
+              "Hero reverse video playback could not return to operations.",
+              error,
+            );
+          });
+      });
     };
 
     const canStartDirection = (direction: "down" | "up") => {
@@ -765,12 +1304,15 @@ export function HeroScene({
       if (direction === "down") {
         return (
           videoStepRef.current === "start" ||
-          videoStepRef.current === "reverse"
+          videoStepRef.current === "capability" ||
+          videoStepRef.current === "operations"
         );
       }
 
       return (
-        videoStepRef.current === "end" || videoStepRef.current === "forward"
+        videoStepRef.current === "capability" ||
+        videoStepRef.current === "operations" ||
+        videoStepRef.current === "final"
       );
     };
 
@@ -780,8 +1322,28 @@ export function HeroScene({
       }
 
       if (direction === "down") {
-        hideHud();
-        playToEnd();
+        if (videoStepRef.current === "start") {
+          hideHud();
+          playForwardToCapability();
+          return;
+        }
+
+        if (videoStepRef.current === "capability") {
+          playForwardToOperations();
+          return;
+        }
+
+        playForwardToFinal();
+        return;
+      }
+
+      if (videoStepRef.current === "final") {
+        playReverseToOperations();
+        return;
+      }
+
+      if (videoStepRef.current === "operations") {
+        playReverseToCapability();
         return;
       }
 
@@ -892,19 +1454,54 @@ export function HeroScene({
     }
 
     videoStepRef.current = "start";
+    const removeForwardPreloadLink = preloadVideoSource(src);
+    const removeReversePreloadLink = preloadVideoSource(reverseSrc);
+    const removeReverseToCapabilityPreloadLink = preloadVideoSource(
+      reverseToCapabilitySrc,
+    );
+    const removeReverseToOperationsPreloadLink = preloadVideoSource(
+      reverseToOperationsSrc,
+    );
+
+    warmVideoElement(forwardVideo);
+    warmVideoElement(reverseToStartVideo);
+    warmVideoElement(reverseToCapabilityVideo);
+    warmVideoElement(reverseToOperationsVideo);
 
     if (
       forwardVideo.readyState >= forwardVideo.HAVE_METADATA &&
-      reverseVideo.readyState >= reverseVideo.HAVE_METADATA
+      reverseToStartVideo.readyState >= reverseToStartVideo.HAVE_METADATA &&
+      reverseToCapabilityVideo.readyState >=
+        reverseToCapabilityVideo.HAVE_METADATA &&
+      reverseToOperationsVideo.readyState >=
+        reverseToOperationsVideo.HAVE_METADATA
     ) {
       switchToStartFrame();
     } else {
       forwardVideo.addEventListener("loadedmetadata", switchToStartFrame, {
         once: true,
       });
-      reverseVideo.addEventListener("loadedmetadata", switchToStartFrame, {
-        once: true,
-      });
+      reverseToStartVideo.addEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+        {
+          once: true,
+        },
+      );
+      reverseToCapabilityVideo.addEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+        {
+          once: true,
+        },
+      );
+      reverseToOperationsVideo.addEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+        {
+          once: true,
+        },
+      );
     }
 
     addScrollListeners();
@@ -913,13 +1510,28 @@ export function HeroScene({
       isDisposed = true;
       cancelForwardStopMonitor();
       cancelReverseStopMonitor();
-      killCapabilityTweens();
+      killAllDetailOverlayTweens();
       unlockPageScroll();
       removeScrollListeners();
+      removeForwardPreloadLink();
+      removeReversePreloadLink();
+      removeReverseToCapabilityPreloadLink();
+      removeReverseToOperationsPreloadLink();
       forwardVideo.removeEventListener("loadedmetadata", switchToStartFrame);
-      reverseVideo.removeEventListener("loadedmetadata", switchToStartFrame);
+      reverseToStartVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToCapabilityVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
+      reverseToOperationsVideo.removeEventListener(
+        "loadedmetadata",
+        switchToStartFrame,
+      );
     };
-  }, [reverseSrc, src]);
+  }, [reverseSrc, reverseToCapabilitySrc, reverseToOperationsSrc, src]);
 
   useGSAP(
     () => {
@@ -944,12 +1556,12 @@ export function HeroScene({
             clearProps: "all",
           },
         );
-      gsap.set(
-        select(
-          "[data-pulse-dot], [data-scan-line], [data-cta-sheen], [data-status-sweep], [data-capability-root]",
-        ),
-        {
-          opacity: 0,
+        gsap.set(
+          select(
+            "[data-pulse-dot], [data-scan-line], [data-cta-sheen], [data-status-sweep], [data-capability-root], [data-operations-root], [data-final-root]",
+          ),
+          {
+            opacity: 0,
           },
         );
         gsap.set(visualFrame, {
@@ -995,25 +1607,25 @@ export function HeroScene({
       gsap.set(select("[data-interface-line]"), {
         scaleY: 0,
       });
-      gsap.set(select("[data-capability-root]"), {
+      gsap.set(select("[data-capability-root], [data-operations-root], [data-final-root]"), {
         autoAlpha: 0,
       });
-      gsap.set(select("[data-capability-panel]"), {
+      gsap.set(select("[data-capability-panel], [data-operations-panel], [data-final-panel]"), {
         autoAlpha: 0,
         filter: "blur(14px)",
         scale: 0.96,
         y: 24,
       });
-      gsap.set(select("[data-capability-trace]"), {
+      gsap.set(select("[data-capability-trace], [data-operations-trace], [data-final-trace]"), {
         opacity: 0,
         scaleX: 0,
         transformOrigin: "left center",
       });
-      gsap.set(select("[data-capability-marker]"), {
+      gsap.set(select("[data-capability-marker], [data-operations-marker], [data-final-marker]"), {
         opacity: 0,
         scale: 0.42,
       });
-      gsap.set(select("[data-capability-sweep]"), {
+      gsap.set(select("[data-capability-sweep], [data-operations-sweep], [data-final-sweep]"), {
         autoAlpha: 0,
         xPercent: -120,
       });
@@ -1169,6 +1781,26 @@ export function HeroScene({
             crossOrigin="anonymous"
             data-hero-video-reverse
           />
+          <video
+            ref={reverseToCapabilityVideoRef}
+            className={`${styles.video} ${styles.reverseVideo}`}
+            src={reverseToCapabilitySrc}
+            muted
+            playsInline
+            preload="auto"
+            crossOrigin="anonymous"
+            data-hero-video-reverse-operations
+          />
+          <video
+            ref={reverseToOperationsVideoRef}
+            className={`${styles.video} ${styles.reverseVideo}`}
+            src={reverseToOperationsSrc}
+            muted
+            playsInline
+            preload="auto"
+            crossOrigin="anonymous"
+            data-hero-video-reverse-final
+          />
         </div>
         <div className={styles.cinematicScrim} ref={cinematicScrimRef} />
       </div>
@@ -1176,6 +1808,8 @@ export function HeroScene({
       <div className={styles.contentShell}>
         <HeroIntroInterface />
         <HeroCapabilityInterface />
+        <HeroOperationsInterface />
+        <HeroFinalInterface />
       </div>
     </section>
   );

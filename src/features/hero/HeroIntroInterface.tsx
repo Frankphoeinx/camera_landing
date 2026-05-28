@@ -236,7 +236,10 @@ export function HeroIntroInterface() {
           <span data-headline-line>awareness</span>
         </span>
         <span className={styles.headlineMask}>
-          <span data-headline-line>without wiring.</span>
+          <span data-headline-line>without</span>
+        </span>
+        <span className={styles.headlineMask}>
+          <span data-headline-line>wiring.</span>
         </span>
       </h1>
 

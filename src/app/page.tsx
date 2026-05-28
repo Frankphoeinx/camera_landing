@@ -6,6 +6,8 @@ export default function Home() {
       <HeroScene
         src="/media/videos/hero-arrival-optimized.mp4"
         reverseSrc="/media/videos/hero-arrival-reverse-optimized.mp4"
+        reverseToCapabilitySrc="/media/videos/hero-arrival-reverse-10-to-4-optimized.mp4"
+        reverseToOperationsSrc="/media/videos/hero-arrival-reverse-final-to-10-optimized.mp4"
       />
     </main>
   );
