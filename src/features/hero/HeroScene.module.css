@@ -66,6 +66,79 @@
   pointer-events: none;
 }
 
+.scrollCue {
+  --scroll-cue-rotate: 45deg;
+  --scroll-cue-shift: 7px;
+
+  position: absolute;
+  right: var(--hero-interface-inset);
+  bottom: var(--hero-interface-inset);
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(255, 247, 234, 0.82);
+  pointer-events: none;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.76);
+  animation: scrollCueReveal 360ms ease-out both;
+}
+
+.scrollCueUp {
+  --scroll-cue-rotate: 225deg;
+  --scroll-cue-shift: -7px;
+}
+
+.scrollCueGlyph {
+  position: relative;
+  order: 2;
+  display: block;
+  width: 15px;
+  height: 30px;
+  overflow: hidden;
+}
+
+.scrollCueGlyph::before,
+.scrollCueGlyph::after {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  content: "";
+  border-right: 1px solid rgba(242, 193, 107, 0.9);
+  border-bottom: 1px solid rgba(242, 193, 107, 0.9);
+  transform: translateX(-50%) rotate(var(--scroll-cue-rotate));
+  animation: scrollCueArrow 1.18s ease-in-out infinite;
+}
+
+.scrollCueGlyph::after {
+  animation-delay: 180ms;
+}
+
+.scrollCueArrow {
+  display: none;
+}
+
+.scrollCueText {
+  order: 1;
+  display: grid;
+  font-family: var(--font-mono);
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.scrollCueText > span {
+  color: rgba(255, 247, 234, 0.74);
+  font-size: 0.64rem;
+  font-weight: 650;
+  letter-spacing: 0.18em;
+}
+
+.scrollCueText > strong {
+  display: none;
+}
+
 .interface {
   position: absolute;
   top: var(--hero-interface-inset);
@@ -1281,6 +1354,31 @@
   }
 }
 
+@keyframes scrollCueReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scrollCueArrow {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: translate(-50%, calc(var(--scroll-cue-shift) * -0.45)) rotate(var(--scroll-cue-rotate));
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, var(--scroll-cue-shift)) rotate(var(--scroll-cue-rotate));
+  }
+}
+
 @keyframes typewriterCursorBlink {
   0%,
   42% {
@@ -1359,6 +1457,25 @@
     height: var(--hero-viewport-height);
     min-height: var(--hero-viewport-height);
     padding: 0;
+  }
+
+  .scrollCue {
+    min-height: 38px;
+    gap: 8px;
+    padding: 7px 9px;
+  }
+
+  .scrollCueGlyph {
+    width: 22px;
+    height: 28px;
+  }
+
+  .scrollCueText > span {
+    display: none;
+  }
+
+  .scrollCueText > strong {
+    font-size: 0.64rem;
   }
 
   .interface {
@@ -1725,6 +1842,8 @@
   .recordingDot::after,
   .primaryAction:hover .actionSheen,
   .primaryAction:focus-visible .actionSheen,
+  .scrollCue,
+  .scrollCueArrow,
   .typewriterCursor,
   .valueSlideEnter,
   .valueSlideExit {

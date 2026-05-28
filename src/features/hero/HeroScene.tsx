@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { HeroCapabilityInterface } from "./HeroCapabilityInterface";
@@ -20,6 +20,7 @@ const REVERSE_TO_OPERATIONS_FALLBACK_SECONDS = 3.55;
 const SCROLL_DIRECTION_THRESHOLD = 4;
 const START_FRAME_EPSILON_SECONDS = 0.05;
 const VIDEO_LAYER_CROSSFADE_SECONDS = 0.22;
+const DEFERRED_VIDEO_READY_TIMEOUT_MS = 2600;
 
 type HeroVideoStep =
   | "start"
@@ -36,6 +37,21 @@ type HeroVideoStep =
 type ForwardTarget = "capability" | "operations" | "final";
 type ReverseTarget = "start" | "capability" | "operations";
 type DetailOverlayKind = "capability" | "operations" | "final";
+type ScrollCueMode = "down" | "up" | "hidden";
+
+const scrollCueCopy = {
+  down: {
+    ariaLabel: "Scroll down to continue",
+    direction: "Down",
+  },
+  up: {
+    ariaLabel: "Scroll up to review",
+    direction: "Up",
+  },
+} satisfies Record<Exclude<ScrollCueMode, "hidden">, {
+  ariaLabel: string;
+  direction: string;
+}>;
 
 type HeroSceneProps = {
   src: string;
@@ -54,6 +70,7 @@ export function HeroScene({
   poster,
   label = "Solar outdoor security camera hero",
 }: HeroSceneProps) {
+  const [scrollCueMode, setScrollCueMode] = useState<ScrollCueMode>("down");
   const rootRef = useRef<HTMLElement>(null);
   const visualFrameRef = useRef<HTMLDivElement>(null);
   const cinematicScrimRef = useRef<HTMLDivElement>(null);
@@ -62,6 +79,8 @@ export function HeroScene({
   const reverseToCapabilityVideoRef = useRef<HTMLVideoElement>(null);
   const reverseToOperationsVideoRef = useRef<HTMLVideoElement>(null);
   const videoStepRef = useRef<HeroVideoStep>("start");
+  const scrollCue =
+    scrollCueMode === "hidden" ? null : scrollCueCopy[scrollCueMode];
 
   useEffect(() => {
     const forwardVideoElement = forwardVideoRef.current;
@@ -125,10 +144,21 @@ export function HeroScene({
     let forwardStopFrameId: number | null = null;
     let reverseStopFrameId: number | null = null;
     let isPageScrollLocked = false;
+    let areDeferredVideosWarmed = false;
+    let deferredWarmupFrameId: number | null = null;
+    let removeDeferredPreloadLinks: () => void = () => undefined;
     let lockedScrollX = window.scrollX;
     let lockedScrollY = window.scrollY;
     let originalRootOverflow = "";
     let originalBodyOverflow = "";
+
+    const showScrollCue = (mode: Exclude<ScrollCueMode, "hidden">) => {
+      setScrollCueMode(mode);
+    };
+
+    const hideScrollCue = () => {
+      setScrollCueMode("hidden");
+    };
 
     const cancelForwardStopMonitor = () => {
       if (forwardStopFrameId === null) {
@@ -168,6 +198,8 @@ export function HeroScene({
     };
 
     const lockPageScroll = () => {
+      hideScrollCue();
+
       if (isPageScrollLocked) {
         return;
       }
@@ -209,7 +241,10 @@ export function HeroScene({
 
     const showForwardVideo = () => showVideoLayer(forwardVideo);
 
-    const preloadVideoSource = (href: string) => {
+    const preloadVideoSource = (
+      href: string,
+      fetchPriority: "high" | "low" = "high",
+    ) => {
       const absoluteHref = new URL(href, window.location.href).href;
       const existingPreloadLink = Array.from(
         document.head.querySelectorAll<HTMLLinkElement>(
@@ -227,7 +262,7 @@ export function HeroScene({
       preloadLink.href = href;
       preloadLink.type = "video/mp4";
       preloadLink.crossOrigin = "anonymous";
-      preloadLink.setAttribute("fetchpriority", "high");
+      preloadLink.setAttribute("fetchpriority", fetchPriority);
       document.head.append(preloadLink);
 
       return () => preloadLink.remove();
@@ -235,10 +270,62 @@ export function HeroScene({
 
     const warmVideoElement = (video: HTMLVideoElement) => {
       video.preload = "auto";
-      video.load();
+
+      if (video.networkState === video.NETWORK_EMPTY) {
+        video.load();
+      }
     };
 
-    const waitForVideoFrameReady = (video: HTMLVideoElement) =>
+    const warmDeferredVideos = () => {
+      if (areDeferredVideosWarmed) {
+        return;
+      }
+
+      areDeferredVideosWarmed = true;
+
+      const removePreloadLinks = [
+        preloadVideoSource(reverseSrc, "low"),
+        preloadVideoSource(reverseToCapabilitySrc, "low"),
+        preloadVideoSource(reverseToOperationsSrc, "low"),
+      ];
+
+      removeDeferredPreloadLinks = () => {
+        removePreloadLinks.forEach((removePreloadLink) => {
+          removePreloadLink();
+        });
+      };
+
+      warmVideoElement(reverseToStartVideo);
+      warmVideoElement(reverseToCapabilityVideo);
+      warmVideoElement(reverseToOperationsVideo);
+    };
+
+    const cancelDeferredVideoWarmup = () => {
+      if (deferredWarmupFrameId === null) {
+        return;
+      }
+
+      window.cancelAnimationFrame(deferredWarmupFrameId);
+      deferredWarmupFrameId = null;
+    };
+
+    const scheduleDeferredVideoWarmup = () => {
+      if (areDeferredVideosWarmed || deferredWarmupFrameId !== null) {
+        return;
+      }
+
+      deferredWarmupFrameId = window.requestAnimationFrame(() => {
+        deferredWarmupFrameId = window.requestAnimationFrame(() => {
+          deferredWarmupFrameId = null;
+          warmDeferredVideos();
+        });
+      });
+    };
+
+    const waitForVideoFrameReady = (
+      video: HTMLVideoElement,
+      timeoutMs = 420,
+    ) =>
       new Promise<void>((resolve) => {
         let timeoutId: number | null = null;
         let firstFrameId: number | null = null;
@@ -249,6 +336,7 @@ export function HeroScene({
           video.removeEventListener("canplay", settle);
           video.removeEventListener("loadeddata", settle);
           video.removeEventListener("seeked", settle);
+          video.removeEventListener("error", settle);
 
           if (timeoutId !== null) {
             window.clearTimeout(timeoutId);
@@ -287,8 +375,15 @@ export function HeroScene({
         video.addEventListener("canplay", settle, { once: true });
         video.addEventListener("loadeddata", settle, { once: true });
         video.addEventListener("seeked", settle, { once: true });
-        timeoutId = window.setTimeout(settle, 420);
+        video.addEventListener("error", settle, { once: true });
+        timeoutId = window.setTimeout(settle, timeoutMs);
       });
+
+    const waitForDeferredVideoFrameReady = (video: HTMLVideoElement) => {
+      warmDeferredVideos();
+
+      return waitForVideoFrameReady(video, DEFERRED_VIDEO_READY_TIMEOUT_MS);
+    };
 
     const crossfadeVideoLayer = (
       fromVideo: HTMLVideoElement,
@@ -762,7 +857,7 @@ export function HeroScene({
     ) => {
       prepareReverseFrame(reverseToStartVideo, 0);
 
-      void waitForVideoFrameReady(reverseToStartVideo).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToStartVideo).then(() => {
         if (isDisposed || videoStepRef.current !== expectedStep) {
           return;
         }
@@ -772,11 +867,12 @@ export function HeroScene({
             return;
           }
 
-          videoStepRef.current = "capability";
-          prepareForwardFrame(HERO_CAPABILITY_TIME_SECONDS);
-          showDetailOverlay("capability");
-          unlockPageScroll();
-        });
+            videoStepRef.current = "capability";
+            prepareForwardFrame(HERO_CAPABILITY_TIME_SECONDS);
+            showDetailOverlay("capability");
+            showScrollCue("down");
+            unlockPageScroll();
+          });
       });
     };
 
@@ -786,7 +882,7 @@ export function HeroScene({
     ) => {
       prepareReverseFrame(reverseToCapabilityVideo, 0);
 
-      void waitForVideoFrameReady(reverseToCapabilityVideo).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToCapabilityVideo).then(() => {
         if (isDisposed || videoStepRef.current !== expectedStep) {
           return;
         }
@@ -800,6 +896,7 @@ export function HeroScene({
             videoStepRef.current = "operations";
             prepareForwardFrame(HERO_OPERATIONS_TIME_SECONDS);
             showDetailOverlay("operations");
+            showScrollCue("down");
             unlockPageScroll();
           },
         );
@@ -809,7 +906,7 @@ export function HeroScene({
     const settleAtFinal = (expectedStep: HeroVideoStep) => {
       prepareReverseFrame(reverseToOperationsVideo, 0);
 
-      void waitForVideoFrameReady(reverseToOperationsVideo).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToOperationsVideo).then(() => {
         if (isDisposed || videoStepRef.current !== expectedStep) {
           return;
         }
@@ -823,6 +920,7 @@ export function HeroScene({
             videoStepRef.current = "final";
             prepareForwardFrame(HERO_FINAL_TIME_SECONDS);
             showDetailOverlay("final");
+            showScrollCue("up");
             unlockPageScroll();
           },
         );
@@ -847,6 +945,7 @@ export function HeroScene({
 
           videoStepRef.current = "start";
           showHud();
+          showScrollCue("down");
           unlockPageScroll();
         });
       });
@@ -900,10 +999,16 @@ export function HeroScene({
       reverseToCapabilityVideo.pause();
       reverseToOperationsVideo.pause();
       forwardVideo.currentTime = 0;
-      reverseToStartVideo.currentTime = 0;
-      reverseToCapabilityVideo.currentTime = 0;
-      reverseToOperationsVideo.currentTime = 0;
+
+      [reverseToStartVideo, reverseToCapabilityVideo, reverseToOperationsVideo]
+        .filter((video) => video.readyState >= video.HAVE_METADATA)
+        .forEach((video) => {
+          video.currentTime = 0;
+        });
+
       showForwardVideo();
+      showScrollCue("down");
+      scheduleDeferredVideoWarmup();
     };
 
     const startForwardStopMonitor = (target: ForwardTarget) => {
@@ -997,6 +1102,7 @@ export function HeroScene({
       }
 
       videoStepRef.current = "playingToCapability";
+      hideScrollCue();
       lockPageScroll();
       hideAllDetailOverlays();
       cancelReverseStopMonitor();
@@ -1035,6 +1141,7 @@ export function HeroScene({
           videoStepRef.current = "start";
           unlockPageScroll();
           showHud();
+          showScrollCue("down");
           console.warn("Hero video playback could not start.", error);
         });
     };
@@ -1045,6 +1152,7 @@ export function HeroScene({
       }
 
       videoStepRef.current = "playingToOperations";
+      hideScrollCue();
       lockPageScroll();
       hideDetailOverlay("capability");
       cancelReverseStopMonitor();
@@ -1093,6 +1201,7 @@ export function HeroScene({
               unlockPageScroll();
               showVideoLayer(reverseToStartVideo);
               showDetailOverlay("capability");
+              showScrollCue("down");
               console.warn("Hero video playback could not continue.", error);
             });
         });
@@ -1105,6 +1214,7 @@ export function HeroScene({
       }
 
       videoStepRef.current = "playingToFinal";
+      hideScrollCue();
       lockPageScroll();
       hideDetailOverlay("operations");
       cancelReverseStopMonitor();
@@ -1154,6 +1264,7 @@ export function HeroScene({
                 unlockPageScroll();
                 showVideoLayer(reverseToCapabilityVideo);
                 showDetailOverlay("operations");
+                showScrollCue("down");
                 console.warn(
                   "Hero video playback could not reach final frame.",
                   error,
@@ -1170,6 +1281,7 @@ export function HeroScene({
       }
 
       videoStepRef.current = "reversingToStart";
+      hideScrollCue();
       lockPageScroll();
       hideDetailOverlay("capability");
       cancelForwardStopMonitor();
@@ -1178,7 +1290,7 @@ export function HeroScene({
       reverseToOperationsVideo.pause();
       prepareReverseFrame(reverseToStartVideo, 0);
 
-      void waitForVideoFrameReady(reverseToStartVideo).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToStartVideo).then(() => {
         if (isDisposed || videoStepRef.current !== "reversingToStart") {
           return;
         }
@@ -1201,6 +1313,7 @@ export function HeroScene({
             unlockPageScroll();
             showVideoLayer(reverseToStartVideo);
             showDetailOverlay("capability");
+            showScrollCue("down");
             console.warn("Hero reverse video playback could not start.", error);
           });
       });
@@ -1212,6 +1325,7 @@ export function HeroScene({
       }
 
       videoStepRef.current = "reversingToCapability";
+      hideScrollCue();
       lockPageScroll();
       hideDetailOverlay("operations");
       cancelForwardStopMonitor();
@@ -1220,7 +1334,7 @@ export function HeroScene({
       reverseToOperationsVideo.pause();
       prepareReverseFrame(reverseToCapabilityVideo, 0);
 
-      void waitForVideoFrameReady(reverseToCapabilityVideo).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToCapabilityVideo).then(() => {
         if (isDisposed || videoStepRef.current !== "reversingToCapability") {
           return;
         }
@@ -1243,6 +1357,7 @@ export function HeroScene({
             unlockPageScroll();
             showVideoLayer(reverseToCapabilityVideo);
             showDetailOverlay("operations");
+            showScrollCue("down");
             console.warn(
               "Hero reverse video playback could not continue.",
               error,
@@ -1257,6 +1372,7 @@ export function HeroScene({
       }
 
       videoStepRef.current = "reversingToOperations";
+      hideScrollCue();
       lockPageScroll();
       hideDetailOverlay("final");
       cancelForwardStopMonitor();
@@ -1265,7 +1381,7 @@ export function HeroScene({
       reverseToCapabilityVideo.pause();
       prepareReverseFrame(reverseToOperationsVideo, 0);
 
-      void waitForVideoFrameReady(reverseToOperationsVideo).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToOperationsVideo).then(() => {
         if (isDisposed || videoStepRef.current !== "reversingToOperations") {
           return;
         }
@@ -1288,6 +1404,7 @@ export function HeroScene({
             unlockPageScroll();
             showVideoLayer(reverseToOperationsVideo);
             showDetailOverlay("final");
+            showScrollCue("up");
             console.warn(
               "Hero reverse video playback could not return to operations.",
               error,
@@ -1320,6 +1437,8 @@ export function HeroScene({
       if (!canStartDirection(direction)) {
         return;
       }
+
+      warmDeferredVideos();
 
       if (direction === "down") {
         if (videoStepRef.current === "start") {
@@ -1455,53 +1574,15 @@ export function HeroScene({
 
     videoStepRef.current = "start";
     const removeForwardPreloadLink = preloadVideoSource(src);
-    const removeReversePreloadLink = preloadVideoSource(reverseSrc);
-    const removeReverseToCapabilityPreloadLink = preloadVideoSource(
-      reverseToCapabilitySrc,
-    );
-    const removeReverseToOperationsPreloadLink = preloadVideoSource(
-      reverseToOperationsSrc,
-    );
 
     warmVideoElement(forwardVideo);
-    warmVideoElement(reverseToStartVideo);
-    warmVideoElement(reverseToCapabilityVideo);
-    warmVideoElement(reverseToOperationsVideo);
 
-    if (
-      forwardVideo.readyState >= forwardVideo.HAVE_METADATA &&
-      reverseToStartVideo.readyState >= reverseToStartVideo.HAVE_METADATA &&
-      reverseToCapabilityVideo.readyState >=
-        reverseToCapabilityVideo.HAVE_METADATA &&
-      reverseToOperationsVideo.readyState >=
-        reverseToOperationsVideo.HAVE_METADATA
-    ) {
+    if (forwardVideo.readyState >= forwardVideo.HAVE_METADATA) {
       switchToStartFrame();
     } else {
       forwardVideo.addEventListener("loadedmetadata", switchToStartFrame, {
         once: true,
       });
-      reverseToStartVideo.addEventListener(
-        "loadedmetadata",
-        switchToStartFrame,
-        {
-          once: true,
-        },
-      );
-      reverseToCapabilityVideo.addEventListener(
-        "loadedmetadata",
-        switchToStartFrame,
-        {
-          once: true,
-        },
-      );
-      reverseToOperationsVideo.addEventListener(
-        "loadedmetadata",
-        switchToStartFrame,
-        {
-          once: true,
-        },
-      );
     }
 
     addScrollListeners();
@@ -1514,22 +1595,9 @@ export function HeroScene({
       unlockPageScroll();
       removeScrollListeners();
       removeForwardPreloadLink();
-      removeReversePreloadLink();
-      removeReverseToCapabilityPreloadLink();
-      removeReverseToOperationsPreloadLink();
+      removeDeferredPreloadLinks();
+      cancelDeferredVideoWarmup();
       forwardVideo.removeEventListener("loadedmetadata", switchToStartFrame);
-      reverseToStartVideo.removeEventListener(
-        "loadedmetadata",
-        switchToStartFrame,
-      );
-      reverseToCapabilityVideo.removeEventListener(
-        "loadedmetadata",
-        switchToStartFrame,
-      );
-      reverseToOperationsVideo.removeEventListener(
-        "loadedmetadata",
-        switchToStartFrame,
-      );
     };
   }, [reverseSrc, reverseToCapabilitySrc, reverseToOperationsSrc, src]);
 
@@ -1777,7 +1845,7 @@ export function HeroScene({
             src={reverseSrc}
             muted
             playsInline
-            preload="auto"
+            preload="none"
             crossOrigin="anonymous"
             data-hero-video-reverse
           />
@@ -1787,7 +1855,7 @@ export function HeroScene({
             src={reverseToCapabilitySrc}
             muted
             playsInline
-            preload="auto"
+            preload="none"
             crossOrigin="anonymous"
             data-hero-video-reverse-operations
           />
@@ -1797,7 +1865,7 @@ export function HeroScene({
             src={reverseToOperationsSrc}
             muted
             playsInline
-            preload="auto"
+            preload="none"
             crossOrigin="anonymous"
             data-hero-video-reverse-final
           />
@@ -1811,6 +1879,24 @@ export function HeroScene({
         <HeroOperationsInterface />
         <HeroFinalInterface />
       </div>
+
+      {scrollCue ? (
+        <div
+          className={`${styles.scrollCue} ${
+            scrollCueMode === "up" ? styles.scrollCueUp : styles.scrollCueDown
+          }`}
+          aria-label={scrollCue.ariaLabel}
+          data-scroll-cue
+        >
+          <span className={styles.scrollCueGlyph} aria-hidden="true">
+            <span className={styles.scrollCueArrow} />
+          </span>
+          <span className={styles.scrollCueText}>
+            <span>Scroll</span>
+            <strong>{scrollCue.direction}</strong>
+          </span>
+        </div>
+      ) : null}
     </section>
   );
 }
