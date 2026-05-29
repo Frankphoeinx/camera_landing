@@ -83,6 +83,15 @@
   animation: scrollCueReveal 360ms ease-out both;
 }
 
+.section[data-scroll-cue-mode="hidden"] .scrollCue {
+  display: none;
+}
+
+.section[data-scroll-cue-mode="up"] .scrollCue {
+  --scroll-cue-rotate: 225deg;
+  --scroll-cue-shift: -7px;
+}
+
 .scrollCueUp {
   --scroll-cue-rotate: 225deg;
   --scroll-cue-shift: -7px;
@@ -149,11 +158,11 @@
   width: min(680px, calc(100vw - (var(--hero-interface-inset) + var(--hero-interface-inset))));
   padding: var(--hero-interface-padding) 0 var(--hero-interface-padding) var(--hero-interface-padding);
   color: #fff4df;
-  filter: blur(18px);
-  opacity: 0;
+  filter: none;
+  opacity: 1;
   pointer-events: auto;
-  transform: translateY(28px);
-  visibility: hidden;
+  transform: none;
+  visibility: visible;
 }
 
 .interface::before {
