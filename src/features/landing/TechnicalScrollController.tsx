@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { useEffect } from "react";
 
 import {
+  outdoorCameraModels,
   TECHNICAL_VIDEO_END_TIME_SECONDS,
   technicalSteps,
 } from "./TechnicalScrollScene.data";
@@ -18,6 +19,8 @@ const PLAYBACK_STOP_EARLY_SECONDS = 0.025;
 const VIDEO_LAYER_CROSSFADE_SECONDS = 0.22;
 const METADATA_WAIT_TIMEOUT_MS = 1800;
 const SEEK_WAIT_TIMEOUT_MS = 1400;
+
+type TechnicalSceneMode = "models" | "steps";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -52,8 +55,20 @@ export function TechnicalScrollController() {
     const panels = Array.from(
       root.querySelectorAll<HTMLElement>("[data-technical-panel]"),
     );
+    const stepperGroup = root.querySelector<HTMLElement>(
+      "[data-technical-stepper]",
+    );
     const indicators = Array.from(
       root.querySelectorAll<HTMLElement>("[data-technical-indicator]"),
+    );
+    const modelInterface = root.querySelector<HTMLElement>(
+      "[data-camera-model-interface]",
+    );
+    const modelGroups = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-camera-model-group]"),
+    );
+    const modelImageLayers = Array.from(
+      root.querySelectorAll<HTMLImageElement>("[data-camera-model-image]"),
     );
     const progressFill = root.querySelector<HTMLElement>(
       "[data-technical-progress-fill]",
@@ -66,6 +81,9 @@ export function TechnicalScrollController() {
     );
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let activeStepIndex = 0;
+    let activeModelIndex = 0;
+    let activeModelStepIndex = 0;
+    let activeMode: TechnicalSceneMode = "steps";
     let activeVideoLayer: HTMLVideoElement = video;
     let layerFadeTimeline: ReturnType<typeof gsap.timeline> | null = null;
     let layerFadeId = 0;
@@ -137,6 +155,21 @@ export function TechnicalScrollController() {
     const warmVideos = () => {
       warmVideoElement(video);
       warmVideoElement(reverseVideo);
+    };
+
+    const warmModelImages = () => {
+      modelImageLayers.forEach((image) => {
+        image.loading = "eager";
+        image.decoding = "async";
+
+        if (!image.complete) {
+          const decodePromise = image.decode?.();
+
+          if (decodePromise) {
+            void decodePromise.catch(() => undefined);
+          }
+        }
+      });
     };
 
     const isMetadataReady = (targetVideo: HTMLVideoElement) =>
@@ -537,6 +570,112 @@ export function TechnicalScrollController() {
       }
     };
 
+    const setSceneMode = (mode: TechnicalSceneMode) => {
+      activeMode = mode;
+      root.dataset.technicalMode = mode;
+      stepperGroup?.setAttribute("aria-hidden", String(mode === "models"));
+      modelInterface?.setAttribute("aria-hidden", String(mode !== "models"));
+    };
+
+    const updateModelInterface = (modelIndex: number, modelStepIndex = 0) => {
+      if (outdoorCameraModels.length === 0) {
+        return;
+      }
+
+      const nextModelIndex = clamp(
+        modelIndex,
+        0,
+        outdoorCameraModels.length - 1,
+      );
+      const activeModel = outdoorCameraModels[nextModelIndex];
+      const stepCount = activeModel.steps.length;
+      const nextStepIndex = clamp(modelStepIndex, 0, stepCount - 1);
+
+      activeModelIndex = nextModelIndex;
+      activeModelStepIndex = nextStepIndex;
+      root.dataset.activeModel = String(nextModelIndex + 1);
+      root.dataset.activeModelStep = String(nextStepIndex + 1);
+
+      modelGroups.forEach((group, index) => {
+        const isActiveGroup = index === nextModelIndex;
+        const indicators = Array.from(
+          group.querySelectorAll<HTMLElement>(
+            "[data-camera-model-step-indicator]",
+          ),
+        );
+        const progressFill = group.querySelector<HTMLElement>(
+          "[data-camera-model-progress-fill]",
+        );
+        const current = group.querySelector<HTMLElement>(
+          "[data-camera-model-step-current]",
+        );
+        const total = group.querySelector<HTMLElement>(
+          "[data-camera-model-step-total]",
+        );
+
+        group.dataset.active = String(isActiveGroup);
+        group.setAttribute("aria-hidden", String(!isActiveGroup));
+
+        indicators.forEach((indicator, indicatorIndex) => {
+          indicator.dataset.active = String(
+            isActiveGroup && indicatorIndex === nextStepIndex,
+          );
+          indicator.dataset.complete = String(
+            isActiveGroup && indicatorIndex < nextStepIndex,
+          );
+        });
+
+        if (progressFill) {
+          progressFill.style.transform = `scaleY(${
+            indicators.length === 1 || !isActiveGroup
+              ? isActiveGroup
+                ? 1
+                : 0
+              : nextStepIndex / (indicators.length - 1)
+          })`;
+        }
+
+        if (current && isActiveGroup) {
+          current.textContent = String(nextStepIndex + 1).padStart(2, "0");
+        }
+
+        if (total) {
+          total.textContent = String(indicators.length).padStart(2, "0");
+        }
+      });
+
+      modelImageLayers.forEach((image) => {
+        const modelImageIndex = Number(image.dataset.cameraModelImageIndex);
+        const isActive = modelImageIndex === nextModelIndex;
+
+        image.dataset.active = String(isActive);
+        image.setAttribute("aria-hidden", String(!isActive));
+      });
+    };
+
+    const showModelInterface = (modelIndex: number) => {
+      if (outdoorCameraModels.length === 0) {
+        return false;
+      }
+
+      clearTransitionPlayback();
+      videoLayers.forEach((targetVideo) => targetVideo.pause());
+      warmModelImages();
+      updateModelInterface(modelIndex, 0);
+      setSceneMode("models");
+      return true;
+    };
+
+    const showStepInterface = () => {
+      clearTransitionPlayback();
+      videoLayers.forEach((targetVideo) => targetVideo.pause());
+      updateInterface(technicalSteps.length - 1);
+      setVideoFrame(technicalSteps[technicalSteps.length - 1].time);
+      showVideoLayer(video);
+      setSceneMode("steps");
+      return true;
+    };
+
     const forceCompleteTransition = (stepIndex: number, reason: string) => {
       if (isDisposed) {
         return;
@@ -796,11 +935,6 @@ export function TechnicalScrollController() {
       playReverseToStep(nextStepIndex, targetTime, sourceStepIndex);
     };
 
-    const canHandleDirection = (direction: "down" | "up") =>
-      direction === "down"
-        ? activeStepIndex < technicalSteps.length - 1
-        : activeStepIndex > 0;
-
     const isSceneActive = () => {
       const rect = root.getBoundingClientRect();
 
@@ -812,11 +946,56 @@ export function TechnicalScrollController() {
     };
 
     const handleDirection = (direction: "down" | "up") => {
-      if (!canHandleDirection(direction)) {
+      if (activeMode === "models") {
+        const activeModel = outdoorCameraModels[activeModelIndex];
+
+        if (direction === "down") {
+          if (activeModelStepIndex < activeModel.steps.length - 1) {
+            updateModelInterface(activeModelIndex, activeModelStepIndex + 1);
+            return true;
+          }
+
+          if (activeModelIndex < outdoorCameraModels.length - 1) {
+            updateModelInterface(activeModelIndex + 1, 0);
+            return true;
+          }
+
+          return false;
+        }
+
+        if (activeModelStepIndex > 0) {
+          updateModelInterface(activeModelIndex, activeModelStepIndex - 1);
+          return true;
+        }
+
+        if (activeModelIndex > 0) {
+          const previousModelIndex = activeModelIndex - 1;
+          const previousModel = outdoorCameraModels[previousModelIndex];
+
+          updateModelInterface(
+            previousModelIndex,
+            previousModel.steps.length - 1,
+          );
+          return true;
+        }
+
+        return showStepInterface();
+      }
+
+      if (direction === "down") {
+        if (activeStepIndex >= technicalSteps.length - 1) {
+          return showModelInterface(0);
+        }
+
+        animateToStep(activeStepIndex + 1);
+        return true;
+      }
+
+      if (activeStepIndex <= 0) {
         return false;
       }
 
-      animateToStep(activeStepIndex + (direction === "down" ? 1 : -1));
+      animateToStep(activeStepIndex - 1);
       return true;
     };
 
@@ -921,8 +1100,11 @@ export function TechnicalScrollController() {
     };
 
     const initializeFrame = () => {
+      setSceneMode("steps");
       updateInterface(0);
+      updateModelInterface(0);
       warmVideoElement(video);
+      warmModelImages();
       void prepareInitialFrame().then((isReady) => {
         if (!isDisposed && isReady) {
           void revealInitialFrame();
@@ -940,6 +1122,7 @@ export function TechnicalScrollController() {
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
           warmVideos();
+          warmModelImages();
           void prepareInitialFrame();
         }
       },
