@@ -331,8 +331,10 @@
   z-index: -2;
   overflow: hidden;
   background: #050505;
+  transform: translateZ(0);
 }
 
+.technicalPoster,
 .technicalVideo {
   position: absolute;
   inset: 0;
@@ -340,13 +342,22 @@
   height: 100%;
   object-fit: cover;
   object-position: 62% center;
+  backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+.technicalPoster {
+  opacity: 1;
+  will-change: opacity;
+}
+
+.technicalVideo {
+  opacity: 0;
   will-change: opacity;
 }
 
 .technicalReverseVideo {
   opacity: 0;
-  visibility: hidden;
 }
 
 .technicalScrim {
@@ -360,15 +371,31 @@
 
 .technicalShell {
   display: grid;
-  width: min(920px, calc(100% - clamp(32px, 8vw, 132px)));
+  width: min(360px, calc(100% - clamp(32px, 8vw, 132px)));
   height: 100%;
   min-height: 0;
   margin-inline: clamp(28px, 4.2vw, 82px) auto;
-  grid-template-columns: minmax(0, 1fr) minmax(170px, 250px);
-  gap: clamp(22px, 3vw, 42px);
-  align-content: center;
-  align-items: center;
-  padding: clamp(26px, 5dvh, 56px) 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(14px, 2.4dvh, 24px);
+  align-content: stretch;
+  align-items: stretch;
+  padding: clamp(28px, 5.5dvh, 64px) 0;
+}
+
+.technicalSectionLabel {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  margin: 0;
+  color: rgba(242, 193, 107, 0.92);
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 0.72vw, 0.78rem);
+  font-weight: 760;
+  letter-spacing: 0.16em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .technicalHeader {
@@ -456,13 +483,15 @@
 
 .technicalTimeline {
   display: grid;
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  grid-template-columns: auto 1px minmax(150px, 1fr);
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: auto 1px minmax(168px, 1fr);
   gap: 18px;
   align-items: stretch;
-  justify-self: end;
-  min-height: min(520px, 68dvh);
+  align-self: stretch;
+  justify-self: stretch;
+  height: 100%;
+  min-height: 0;
 }
 
 .technicalCounter {
@@ -503,7 +532,10 @@
 
 .technicalStepList {
   display: grid;
-  gap: 14px;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: clamp(10px, 1.8dvh, 18px);
+  align-content: stretch;
+  min-height: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -511,8 +543,10 @@
 
 .technicalStepList li {
   display: grid;
+  align-content: start;
   gap: 5px;
-  padding: 0 0 14px;
+  min-height: 0;
+  padding: 0 0 clamp(10px, 1.4dvh, 14px);
   border-bottom: 1px solid rgba(255, 247, 234, 0.1);
   opacity: 0.48;
   transition: opacity 220ms ease, transform 220ms ease;
@@ -543,6 +577,43 @@
   text-transform: uppercase;
 }
 
+.technicalStepList small {
+  max-width: 24ch;
+  color: rgba(195, 231, 239, 0.68);
+  font-family: var(--font-mono);
+  font-size: clamp(0.58rem, 0.68vw, 0.68rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.technicalStepList p {
+  max-width: 31ch;
+  max-height: 0;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 247, 234, 0.66);
+  font-size: clamp(0.72rem, 0.84vw, 0.84rem);
+  font-weight: 500;
+  line-height: 1.38;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    max-height 260ms ease,
+    opacity 220ms ease,
+    transform 220ms ease,
+    visibility 220ms ease;
+  visibility: hidden;
+}
+
+.technicalStepList li[data-active="true"] p {
+  max-height: 5rem;
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
 @media (max-width: 1100px) {
   .installationShell {
     grid-template-columns: 1fr;
@@ -554,39 +625,41 @@
 
   .technicalShell {
     grid-template-columns: minmax(0, 1fr);
-    width: min(760px, calc(100% - 40px));
-    margin-inline: auto;
-    gap: 26px;
+    width: min(340px, calc(100% - 40px));
+    margin-inline: clamp(20px, 4vw, 52px) auto;
   }
 
   .technicalTimeline {
     grid-column: 1;
-    grid-row: auto;
+    grid-row: 2;
     width: 100%;
-    min-height: auto;
-    grid-template-columns: auto 1fr;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: auto 1px minmax(154px, 1fr);
     justify-self: stretch;
   }
 
   .technicalProgressTrack {
-    display: none;
+    display: block;
   }
 
   .technicalStepList {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: clamp(8px, 1.4dvh, 14px);
   }
 
   .technicalStepList li {
-    min-height: 76px;
-    padding: 10px;
-    border: 1px solid rgba(255, 247, 234, 0.12);
-    border-radius: 8px;
-    background: rgba(5, 5, 5, 0.5);
+    min-height: 0;
+    padding: 0 0 clamp(8px, 1.3dvh, 12px);
+    border: 0;
+    border-bottom: 1px solid rgba(255, 247, 234, 0.1);
+    border-radius: 0;
+    background: transparent;
   }
 
   .technicalStepList li[data-active="true"] {
-    transform: translateY(-4px);
+    transform: translateX(-6px);
   }
 }
 
@@ -608,10 +681,16 @@
   }
 
   .technicalShell {
-    width: min(100% - 28px, 680px);
+    width: min(300px, calc(100% - 28px));
     height: 100%;
     min-height: 0;
-    padding: 24px 0;
+    margin-inline: 14px auto;
+    padding: 20px 0;
+  }
+
+  .technicalSectionLabel {
+    font-size: 0.56rem;
+    letter-spacing: 0.12em;
   }
 
   .installationShell {
@@ -685,6 +764,7 @@
     line-height: 1.32;
   }
 
+  .technicalPoster,
   .technicalVideo {
     object-position: 66% center;
   }
@@ -695,44 +775,63 @@
       linear-gradient(90deg, rgba(5, 5, 5, 0.38), rgba(5, 5, 5, 0.1));
   }
 
-  .technicalHeader {
-    align-self: start;
-  }
-
-  .technicalPanelStack {
-    min-height: 248px;
-    margin-top: 18px;
-  }
-
-  .technicalPanel {
-    padding: 18px;
-  }
-
   .technicalTimeline {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1px minmax(132px, 1fr);
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
   }
 
   .technicalCounter {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: grid;
+    align-content: start;
+    gap: 4px;
+  }
+
+  .technicalCounter span {
+    font-size: 1.08rem;
   }
 
   .technicalStepList {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 5px;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .technicalStepList li {
     min-height: 0;
     grid-template-columns: 1fr;
-    align-items: center;
-    justify-items: center;
-    padding: 8px 4px;
+    align-items: start;
+    justify-items: start;
+    padding: 0 0 8px;
+  }
+
+  .technicalStepList li[data-active="true"] {
+    transform: translateX(-4px);
+  }
+
+  .technicalStepList span {
+    font-size: 0.58rem;
   }
 
   .technicalStepList strong {
-    display: none;
+    display: block;
+    font-size: 0.62rem;
+  }
+
+  .technicalStepList small {
+    max-width: 20ch;
+    font-size: 0.52rem;
+  }
+
+  .technicalStepList p {
+    max-width: 24ch;
+    font-size: 0.68rem;
+    line-height: 1.3;
+  }
+
+  .technicalStepList li[data-active="true"] p {
+    max-height: 4.6rem;
   }
 }
 
@@ -740,6 +839,7 @@
   .installationShell,
   .technicalShell {
     padding: 22px 0;
+    gap: 12px;
   }
 
   .installationShell {
@@ -849,7 +949,7 @@
   }
 
   .technicalShell {
-    gap: 26px;
+    padding: 22px 0;
   }
 
   .technicalPanelStack {
@@ -872,14 +972,16 @@
   }
 
   .technicalTimeline {
-    min-height: min(410px, 62dvh);
+    height: 100%;
+    min-height: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .technicalPanel,
   .technicalProgressFill,
-  .technicalStepList li {
+  .technicalStepList li,
+  .technicalStepList p {
     animation: none;
     transition: none;
   }

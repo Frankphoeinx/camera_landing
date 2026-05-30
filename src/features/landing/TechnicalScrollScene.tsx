@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { TechnicalScrollController } from "./TechnicalScrollController";
 import { technicalSteps } from "./TechnicalScrollScene.data";
 import styles from "./LandingSections.module.css";
@@ -21,14 +23,23 @@ export function TechnicalScrollScene({
     <section
       className={styles.technicalSection}
       id="system"
-      aria-labelledby="technical-title"
+      aria-label="Technical walkthrough"
       data-active-step="1"
       data-technical-scene
     >
       <div className={styles.technicalMedia} aria-hidden="true">
+        <Image
+          className={styles.technicalPoster}
+          src={poster}
+          alt=""
+          fill
+          loading="eager"
+          sizes="100vw"
+          unoptimized
+          data-technical-poster
+        />
         <video
           className={styles.technicalVideo}
-          poster={poster}
           muted
           playsInline
           preload="metadata"
@@ -51,41 +62,13 @@ export function TechnicalScrollScene({
       </div>
 
       <div className={styles.technicalShell}>
-        <div className={styles.technicalHeader}>
-          <p className={styles.sectionEyebrow}>TECHNICAL WALKTHROUGH</p>
-          <h2 className={styles.technicalTitle} id="technical-title">
-            Scroll through the hardware stack.
-          </h2>
-          <p className={styles.technicalCopy}>
-            Each stop locks to a clear frame, pairing the visible component with
-            the install detail that matters on site.
-          </p>
-        </div>
-
-        <div className={styles.technicalPanelStack}>
-          {technicalSteps.map((step, index) => (
-            <article
-              className={styles.technicalPanel}
-              data-active={index === 0}
-              data-technical-panel
-              aria-hidden={index !== 0}
-              key={step.eyebrow}
-            >
-              <span className={styles.technicalPanelEyebrow}>
-                {step.eyebrow}
-              </span>
-              <strong className={styles.technicalPanelTitle}>
-                {step.title}
-              </strong>
-              <p>{step.body}</p>
-              <span className={styles.technicalPanelMetric}>
-                {step.metric}
-              </span>
-            </article>
-          ))}
-        </div>
-
-        <div className={styles.technicalTimeline} aria-hidden="true">
+        <h2 className={styles.technicalSectionLabel}>
+          SOLAR SENTINEL / VILLA PERIMETER
+        </h2>
+        <div
+          className={styles.technicalTimeline}
+          aria-label="Technical walkthrough steps"
+        >
           <div className={styles.technicalCounter}>
             <span data-technical-current>01</span>
             <strong>/</strong>
@@ -109,6 +92,8 @@ export function TechnicalScrollScene({
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{step.eyebrow}</strong>
+                <small>{step.metric}</small>
+                <p>{step.body}</p>
               </li>
             ))}
           </ol>

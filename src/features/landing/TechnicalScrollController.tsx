@@ -1,5 +1,6 @@
 "use client";
 
+import { gsap } from "gsap";
 import { useEffect } from "react";
 
 import {
@@ -14,8 +15,9 @@ const SCROLL_THRESHOLD = 8;
 const TOUCH_THRESHOLD = 22;
 const SCENE_ALIGNMENT_TOLERANCE_PX = 2;
 const PLAYBACK_STOP_EARLY_SECONDS = 0.025;
+const VIDEO_LAYER_CROSSFADE_SECONDS = 0.22;
 const METADATA_WAIT_TIMEOUT_MS = 1800;
-const SEEK_WAIT_TIMEOUT_MS = 900;
+const SEEK_WAIT_TIMEOUT_MS = 1400;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -37,6 +39,9 @@ export function TechnicalScrollController() {
     );
     const reverseVideo = root?.querySelector<HTMLVideoElement>(
       "[data-technical-video-reverse]",
+    );
+    const posterLayer = root?.querySelector<HTMLElement>(
+      "[data-technical-poster]",
     );
 
     if (!root || !video || !reverseVideo) {
@@ -61,9 +66,16 @@ export function TechnicalScrollController() {
     );
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let activeStepIndex = 0;
+    let activeVideoLayer: HTMLVideoElement = video;
+    let layerFadeTimeline: ReturnType<typeof gsap.timeline> | null = null;
+    let layerFadeId = 0;
     let stopFrameId: number | null = null;
     let watchdogTimeoutId: number | null = null;
     let pendingStepIndex: number | null = null;
+    let initialFrameReadyPromise: Promise<boolean> | null = null;
+    let initialFrameRevealPromise: Promise<void> | null = null;
+    let posterFadeTimeline: ReturnType<typeof gsap.timeline> | null = null;
+    let hasRevealedInitialFrame = false;
     let isTransitioning = false;
     let isDisposed = false;
     let lastTouchY: number | null = null;
@@ -84,9 +96,34 @@ export function TechnicalScrollController() {
       }
     };
 
+    const cancelLayerFade = () => {
+      layerFadeId += 1;
+
+      if (layerFadeTimeline) {
+        layerFadeTimeline.kill();
+        layerFadeTimeline = null;
+      }
+
+      gsap.killTweensOf(videoLayers);
+    };
+
+    const cancelPosterFade = () => {
+      if (posterFadeTimeline) {
+        posterFadeTimeline.kill();
+        posterFadeTimeline = null;
+      }
+
+      if (posterLayer) {
+        gsap.killTweensOf([posterLayer, video]);
+      }
+
+      initialFrameRevealPromise = null;
+    };
+
     const clearTransitionPlayback = () => {
       cancelStopMonitor();
       clearWatchdog();
+      cancelLayerFade();
     };
 
     const warmVideoElement = (targetVideo: HTMLVideoElement) => {
@@ -142,6 +179,13 @@ export function TechnicalScrollController() {
         warmVideoElement(targetVideo);
       });
 
+    const waitForPaint = () =>
+      new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => resolve());
+        });
+      });
+
     const waitForSeekFrame = (
       targetVideo: HTMLVideoElement,
       targetTime: number,
@@ -182,18 +226,42 @@ export function TechnicalScrollController() {
 
         const finish = (isReady: boolean) => {
           cleanup();
-          resolve(isReady);
+
+          if (!isReady) {
+            resolve(false);
+            return;
+          }
+
+          void waitForPaint().then(() => resolve(true));
         };
 
-        const handleReady = () => finish(hasTargetFrame());
+        const handleReady = () => {
+          if (hasTargetFrame()) {
+            finish(true);
+          }
+        };
         const handleError = () => finish(false);
+        const seekTargetTime =
+          targetVideo.readyState < targetVideo.HAVE_CURRENT_DATA &&
+          Math.abs(targetVideo.currentTime - targetTime) <=
+            STEP_TIME_TOLERANCE_SECONDS
+            ? clamp(
+                targetTime + STEP_TIME_TOLERANCE_SECONDS / 4 <=
+                  targetVideo.duration
+                  ? targetTime + STEP_TIME_TOLERANCE_SECONDS / 4
+                  : targetTime - STEP_TIME_TOLERANCE_SECONDS / 4,
+                0,
+                targetVideo.duration,
+              )
+            : targetTime;
 
         targetVideo.addEventListener("seeked", handleReady);
         targetVideo.addEventListener("loadeddata", handleReady);
         targetVideo.addEventListener("canplay", handleReady);
         targetVideo.addEventListener("error", handleError);
 
-        targetVideo.currentTime = targetTime;
+        warmVideoElement(targetVideo);
+        targetVideo.currentTime = seekTargetTime;
 
         if (hasTargetFrame()) {
           finish(true);
@@ -207,6 +275,7 @@ export function TechnicalScrollController() {
       });
 
     const showVideoLayer = (activeVideo: HTMLVideoElement) => {
+      cancelLayerFade();
       videoLayers.forEach((targetVideo) => {
         const isActive = targetVideo === activeVideo;
 
@@ -215,9 +284,66 @@ export function TechnicalScrollController() {
         }
 
         targetVideo.style.opacity = isActive ? "1" : "0";
-        targetVideo.style.visibility = isActive ? "visible" : "hidden";
       });
+      activeVideoLayer = activeVideo;
     };
+
+    const crossfadeToVideoLayer = (targetVideo: HTMLVideoElement) =>
+      new Promise<void>((resolve) => {
+        if (activeVideoLayer === targetVideo || mediaQuery.matches) {
+          showVideoLayer(targetVideo);
+          resolve();
+          return;
+        }
+
+        const sourceVideo = activeVideoLayer;
+        cancelLayerFade();
+        const fadeId = ++layerFadeId;
+
+        videoLayers.forEach((layerVideo) => {
+          if (layerVideo !== sourceVideo && layerVideo !== targetVideo) {
+            layerVideo.pause();
+          }
+        });
+
+        gsap.set(videoLayers, { opacity: 0 });
+        gsap.set([sourceVideo, targetVideo], { opacity: 1 });
+
+        const settle = () => {
+          if (fadeId === layerFadeId && !isDisposed) {
+            videoLayers.forEach((layerVideo) => {
+              const isActive = layerVideo === targetVideo;
+
+              if (!isActive) {
+                layerVideo.pause();
+              }
+
+              layerVideo.style.opacity = isActive ? "1" : "0";
+            });
+            activeVideoLayer = targetVideo;
+          }
+
+          if (fadeId === layerFadeId) {
+            layerFadeTimeline = null;
+          }
+          resolve();
+        };
+
+        layerFadeTimeline = gsap
+          .timeline({
+            onComplete: settle,
+            onInterrupt: settle,
+          })
+          .to(
+            sourceVideo,
+            {
+              duration: VIDEO_LAYER_CROSSFADE_SECONDS,
+              ease: "power2.out",
+              opacity: 0,
+            },
+            0,
+          );
+      });
 
     const setVideoFrame = (targetTime: number) => {
       video.pause();
@@ -229,18 +355,141 @@ export function TechnicalScrollController() {
           ? video.duration
           : TECHNICAL_VIDEO_END_TIME_SECONDS,
       );
-      const isEndFrame =
-        clampedTargetTime >=
-        TECHNICAL_VIDEO_END_TIME_SECONDS - STEP_TIME_TOLERANCE_SECONDS;
 
       if (
         video.readyState >= video.HAVE_METADATA &&
-        (isEndFrame ||
-          Math.abs(video.currentTime - clampedTargetTime) >
-            STEP_TIME_TOLERANCE_SECONDS)
+        Math.abs(video.currentTime - clampedTargetTime) >
+          STEP_TIME_TOLERANCE_SECONDS
       ) {
         video.currentTime = clampedTargetTime;
       }
+    };
+
+    const prepareVideoFrame = (
+      targetVideo: HTMLVideoElement,
+      targetTime: number,
+    ) => {
+      targetVideo.pause();
+
+      if (!isMetadataReady(targetVideo)) {
+        return Promise.resolve(false);
+      }
+
+      const clampedTargetTime = clamp(targetTime, 0, targetVideo.duration);
+
+      if (
+        targetVideo.readyState >= targetVideo.HAVE_CURRENT_DATA &&
+        Math.abs(targetVideo.currentTime - clampedTargetTime) <=
+        STEP_TIME_TOLERANCE_SECONDS
+      ) {
+        return Promise.resolve(true);
+      }
+
+      return waitForSeekFrame(targetVideo, clampedTargetTime);
+    };
+
+    const isInitialFrameReady = () =>
+      video.readyState >= video.HAVE_CURRENT_DATA &&
+      Math.abs(video.currentTime - technicalSteps[0].time) <=
+        STEP_TIME_TOLERANCE_SECONDS;
+
+    const prepareInitialFrame = (): Promise<boolean> => {
+      if (!isMetadataReady(video)) {
+        warmVideoElement(video);
+        return Promise.resolve(false);
+      }
+
+      if (isInitialFrameReady()) {
+        return Promise.resolve(true);
+      }
+
+      if (initialFrameReadyPromise) {
+        return initialFrameReadyPromise.then((isReady) => {
+          if (isReady && isInitialFrameReady()) {
+            return true;
+          }
+
+          initialFrameReadyPromise = null;
+          return prepareInitialFrame();
+        });
+      }
+
+      initialFrameReadyPromise = prepareVideoFrame(
+        video,
+        technicalSteps[0].time,
+      ).then((isReady) => {
+        if (!isReady || !isInitialFrameReady()) {
+          initialFrameReadyPromise = null;
+          return false;
+        }
+
+        return true;
+      });
+
+      return initialFrameReadyPromise;
+    };
+
+    const revealInitialFrame = () => {
+      if (hasRevealedInitialFrame || !posterLayer || mediaQuery.matches) {
+        showVideoLayer(video);
+
+        if (posterLayer) {
+          posterLayer.style.opacity = "0";
+          posterLayer.style.visibility = "hidden";
+        }
+
+        hasRevealedInitialFrame = true;
+        return Promise.resolve();
+      }
+
+      initialFrameRevealPromise ??= new Promise<void>((resolve) => {
+        cancelPosterFade();
+        videoLayers.forEach((targetVideo) => {
+          if (targetVideo !== video) {
+            targetVideo.pause();
+            targetVideo.style.opacity = "0";
+          }
+        });
+        activeVideoLayer = video;
+        posterLayer.style.opacity = "1";
+        posterLayer.style.visibility = "visible";
+        gsap.set(video, { opacity: 0 });
+
+        const settle = () => {
+          posterLayer.style.opacity = "0";
+          posterLayer.style.visibility = "hidden";
+          hasRevealedInitialFrame = true;
+          initialFrameRevealPromise = null;
+          posterFadeTimeline = null;
+          resolve();
+        };
+
+        posterFadeTimeline = gsap
+          .timeline({
+            onComplete: settle,
+            onInterrupt: settle,
+          })
+          .to(
+            video,
+            {
+              duration: VIDEO_LAYER_CROSSFADE_SECONDS,
+              ease: "power2.out",
+              opacity: 1,
+            },
+            0,
+          )
+          .to(
+            posterLayer,
+            {
+              duration: VIDEO_LAYER_CROSSFADE_SECONDS,
+              ease: "power2.out",
+              opacity: 0,
+            },
+            0,
+          );
+      });
+
+      return initialFrameRevealPromise;
     };
 
     const getReverseTime = (forwardTime: number) => {
@@ -307,7 +556,7 @@ export function TechnicalScrollController() {
       isTransitioning = false;
     };
 
-    const finishTransition = (stepIndex: number) => {
+    const finishForwardTransition = (stepIndex: number) => {
       if (isDisposed) {
         return;
       }
@@ -321,17 +570,26 @@ export function TechnicalScrollController() {
       isTransitioning = false;
     };
 
-    const playForwardToStep = (stepIndex: number, targetTime: number) => {
-      const sourceTime = technicalSteps[activeStepIndex].time;
-
-      showVideoLayer(video);
-
-      if (
-        Math.abs(video.currentTime - sourceTime) >
-        STEP_TIME_TOLERANCE_SECONDS
-      ) {
-        setVideoFrame(sourceTime);
+    const finishReverseTransition = (stepIndex: number) => {
+      if (isDisposed) {
+        return;
       }
+
+      clearTransitionPlayback();
+      videoLayers.forEach((targetVideo) => targetVideo.pause());
+      updateInterface(stepIndex);
+      showVideoLayer(reverseVideo);
+      setVideoFrame(technicalSteps[stepIndex].time);
+      pendingStepIndex = null;
+      isTransitioning = false;
+    };
+
+    const playForwardToStep = (
+      stepIndex: number,
+      targetTime: number,
+      sourceStepIndex: number,
+    ) => {
+      const sourceTime = technicalSteps[sourceStepIndex].time;
 
       const monitorStopFrame = () => {
         if (isDisposed) {
@@ -339,30 +597,66 @@ export function TechnicalScrollController() {
         }
 
         if (video.currentTime >= targetTime - PLAYBACK_STOP_EARLY_SECONDS) {
-          finishTransition(stepIndex);
+          finishForwardTransition(stepIndex);
           return;
         }
 
         stopFrameId = window.requestAnimationFrame(monitorStopFrame);
       };
 
-      video.playbackRate = 1;
-      void video
-        .play()
-        .then(() => {
-          if (isDisposed || !isTransitioning) {
-            return;
-          }
+      const startPlayback = async () => {
+        const hasSourceFrame =
+          sourceStepIndex === 0
+            ? await prepareInitialFrame()
+            : await prepareVideoFrame(video, sourceTime);
 
-          stopFrameId = window.requestAnimationFrame(monitorStopFrame);
-        })
-        .catch(() => {
-          if (isDisposed || !isTransitioning) {
-            return;
-          }
+        if (
+          isDisposed ||
+          !isTransitioning ||
+          pendingStepIndex !== stepIndex
+        ) {
+          return;
+        }
 
-          forceCompleteTransition(stepIndex, "play-rejected");
-        });
+        if (!hasSourceFrame) {
+          forceCompleteTransition(stepIndex, "forward-seek-timeout");
+          return;
+        }
+
+        if (sourceStepIndex === 0) {
+          await revealInitialFrame();
+        }
+
+        await crossfadeToVideoLayer(video);
+
+        if (
+          isDisposed ||
+          !isTransitioning ||
+          pendingStepIndex !== stepIndex
+        ) {
+          return;
+        }
+
+        video.playbackRate = 1;
+        void video
+          .play()
+          .then(() => {
+            if (isDisposed || !isTransitioning) {
+              return;
+            }
+
+            stopFrameId = window.requestAnimationFrame(monitorStopFrame);
+          })
+          .catch(() => {
+            if (isDisposed || !isTransitioning) {
+              return;
+            }
+
+            forceCompleteTransition(stepIndex, "play-rejected");
+          });
+      };
+
+      void startPlayback();
 
       watchdogTimeoutId = window.setTimeout(
         () => forceCompleteTransition(stepIndex, "timeout"),
@@ -423,14 +717,18 @@ export function TechnicalScrollController() {
           reverseVideo.currentTime >=
           targetReverseTime - PLAYBACK_STOP_EARLY_SECONDS
         ) {
-          finishTransition(stepIndex);
+          finishReverseTransition(stepIndex);
           return;
         }
 
         stopFrameId = window.requestAnimationFrame(monitorStopFrame);
       };
 
-      showVideoLayer(reverseVideo);
+      await crossfadeToVideoLayer(reverseVideo);
+
+      if (isDisposed || !isTransitioning || pendingStepIndex !== stepIndex) {
+        return;
+      }
 
       void reverseVideo
         .play()
@@ -450,8 +748,12 @@ export function TechnicalScrollController() {
         });
     };
 
-    const playReverseToStep = (stepIndex: number, targetTime: number) => {
-      const sourceTime = technicalSteps[activeStepIndex].time;
+    const playReverseToStep = (
+      stepIndex: number,
+      targetTime: number,
+      sourceStepIndex: number,
+    ) => {
+      const sourceTime = technicalSteps[sourceStepIndex].time;
 
       warmVideoElement(reverseVideo);
       watchdogTimeoutId = window.setTimeout(
@@ -468,14 +770,15 @@ export function TechnicalScrollController() {
         return;
       }
 
+      const sourceStepIndex = activeStepIndex;
       warmVideos();
       clearTransitionPlayback();
 
       const targetTime = technicalSteps[nextStepIndex].time;
 
       if (mediaQuery.matches || video.readyState < video.HAVE_METADATA) {
-        setVideoFrame(targetTime);
         updateInterface(nextStepIndex);
+        setVideoFrame(targetTime);
         showVideoLayer(video);
         isTransitioning = false;
         return;
@@ -483,13 +786,14 @@ export function TechnicalScrollController() {
 
       isTransitioning = true;
       pendingStepIndex = nextStepIndex;
+      updateInterface(nextStepIndex);
 
-      if (nextStepIndex > activeStepIndex) {
-        playForwardToStep(nextStepIndex, targetTime);
+      if (nextStepIndex > sourceStepIndex) {
+        playForwardToStep(nextStepIndex, targetTime, sourceStepIndex);
         return;
       }
 
-      playReverseToStep(nextStepIndex, targetTime);
+      playReverseToStep(nextStepIndex, targetTime, sourceStepIndex);
     };
 
     const canHandleDirection = (direction: "down" | "up") =>
@@ -607,19 +911,23 @@ export function TechnicalScrollController() {
         event.currentTarget === video &&
         pendingStepIndex === technicalSteps.length - 1
       ) {
-        finishTransition(pendingStepIndex);
+        finishForwardTransition(pendingStepIndex);
         return;
       }
 
       if (event.currentTarget === reverseVideo && pendingStepIndex === 0) {
-        finishTransition(pendingStepIndex);
+        finishReverseTransition(pendingStepIndex);
       }
     };
 
     const initializeFrame = () => {
       updateInterface(0);
-      setVideoFrame(technicalSteps[0].time);
-      showVideoLayer(video);
+      warmVideoElement(video);
+      void prepareInitialFrame().then((isReady) => {
+        if (!isDisposed && isReady) {
+          void revealInitialFrame();
+        }
+      });
     };
 
     if (video.readyState >= video.HAVE_METADATA) {
@@ -632,9 +940,10 @@ export function TechnicalScrollController() {
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
           warmVideos();
+          void prepareInitialFrame();
         }
       },
-      { rootMargin: "180px 0px", threshold: 0.15 },
+      { rootMargin: "1000px 0px", threshold: 0.15 },
     );
     observer.observe(root);
 
@@ -654,6 +963,7 @@ export function TechnicalScrollController() {
     return () => {
       isDisposed = true;
       clearTransitionPlayback();
+      cancelPosterFade();
       observer?.disconnect();
       video.removeEventListener("loadedmetadata", initializeFrame);
       videoLayers.forEach((targetVideo) => {
