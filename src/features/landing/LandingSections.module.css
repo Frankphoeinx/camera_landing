@@ -1,0 +1,886 @@
+.installationSection,
+.technicalSection {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: #fff4df;
+  background: var(--color-ink);
+  isolation: isolate;
+}
+
+.sectionEyebrow {
+  margin: 0;
+  color: rgba(242, 193, 107, 0.9);
+  font-family: var(--font-mono);
+  font-size: clamp(0.64rem, 0.72vw, 0.78rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.installationBackground {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background:
+    linear-gradient(115deg, rgba(5, 5, 5, 0.98) 0%, rgba(13, 13, 12, 0.96) 44%, rgba(18, 17, 15, 0.96) 100%),
+    linear-gradient(90deg, rgba(242, 193, 107, 0.08), rgba(78, 145, 168, 0.08));
+}
+
+.installationGrid {
+  position: absolute;
+  inset: -1px;
+  opacity: 0.42;
+  background:
+    linear-gradient(rgba(242, 193, 107, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 193, 107, 0.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.24) 68%, transparent);
+}
+
+.installationSweep {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(242, 193, 107, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(78, 145, 168, 0.1), transparent 45%, rgba(0, 0, 0, 0.34));
+  opacity: 0.72;
+}
+
+.installationShell {
+  display: grid;
+  width: min(1180px, calc(100% - clamp(32px, 6vw, 92px)));
+  min-height: 100dvh;
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  grid-template-rows: auto auto;
+  gap: clamp(24px, 4vw, 56px);
+  align-content: center;
+  align-items: center;
+  padding: clamp(54px, 7vw, 88px) 0;
+}
+
+.installationHeader {
+  max-width: 670px;
+}
+
+.installationTitle,
+.technicalTitle {
+  max-width: 12ch;
+  margin: clamp(12px, 1.6vw, 18px) 0 0;
+  color: #fff7e8;
+  font-size: clamp(2.5rem, 7vw, 6.7rem);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 0.91;
+}
+
+.installationCopy,
+.technicalCopy {
+  max-width: 610px;
+  margin: clamp(18px, 2vw, 26px) 0 0;
+  color: rgba(255, 247, 234, 0.76);
+  font-size: clamp(1rem, 1.4vw, 1.28rem);
+  font-weight: 450;
+  line-height: 1.65;
+}
+
+.installationChecklist {
+  position: relative;
+  display: grid;
+  gap: clamp(16px, 2vw, 24px);
+  align-self: stretch;
+  align-content: center;
+  border: 1px solid rgba(242, 193, 107, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+    linear-gradient(90deg, rgba(5, 5, 5, 0.62), rgba(12, 12, 11, 0.26));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 22px 70px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.installationChecklist::before {
+  position: absolute;
+  inset: 18px;
+  content: "";
+  border: 1px solid rgba(242, 193, 107, 0.14);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 42px 42px;
+  pointer-events: none;
+}
+
+.installationChecklist::after {
+  position: absolute;
+  right: clamp(22px, 4vw, 46px);
+  bottom: clamp(22px, 4vw, 46px);
+  width: min(48%, 260px);
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(78, 145, 168, 0.74), rgba(242, 193, 107, 0.2));
+  pointer-events: none;
+}
+
+.installationChecklistHeader {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(242, 193, 107, 0.18);
+}
+
+.installationChecklistHeader span,
+.installationChecklistHeader strong,
+.installationSignal span,
+.installationChecklistItem span,
+.installationChecklistIndex {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 720;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.installationChecklistHeader span {
+  color: rgba(242, 193, 107, 0.82);
+}
+
+.installationChecklistHeader strong {
+  padding: 6px 9px;
+  border: 1px solid rgba(78, 145, 168, 0.34);
+  border-radius: 6px;
+  color: rgba(195, 231, 239, 0.94);
+  background: rgba(78, 145, 168, 0.08);
+}
+
+.installationSignalGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid rgba(78, 145, 168, 0.24);
+  background: rgba(78, 145, 168, 0.18);
+}
+
+.installationSignal {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: clamp(12px, 1.5vw, 16px);
+  background:
+    linear-gradient(180deg, rgba(78, 145, 168, 0.08), rgba(78, 145, 168, 0.02)),
+    rgba(5, 5, 5, 0.58);
+}
+
+.installationSignal span {
+  color: rgba(195, 231, 239, 0.62);
+}
+
+.installationSignal strong {
+  overflow-wrap: anywhere;
+  color: #fff7e8;
+  font-size: clamp(0.88rem, 1vw, 1rem);
+  font-weight: 720;
+  line-height: 1.12;
+}
+
+.installationChecklistList {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(12px, 1.6vw, 18px);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.installationChecklistItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  padding: 0 0 clamp(12px, 1.6vw, 18px);
+  border-bottom: 1px solid rgba(255, 247, 234, 0.1);
+}
+
+.installationChecklistItem:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.installationChecklistIndex {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(242, 193, 107, 0.2);
+  border-radius: 999px;
+  color: rgba(242, 193, 107, 0.9);
+  background: rgba(5, 5, 5, 0.52);
+}
+
+.installationChecklistItem div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.installationChecklistItem span {
+  color: rgba(255, 247, 234, 0.56);
+}
+
+.installationChecklistItem strong {
+  color: #fff7e8;
+  font-size: clamp(1.08rem, 1.5vw, 1.38rem);
+  font-weight: 740;
+  line-height: 1.1;
+}
+
+.installationChecklistItem p {
+  margin: 0;
+  color: rgba(255, 247, 234, 0.66);
+  font-size: clamp(0.88rem, 1vw, 0.98rem);
+  line-height: 1.48;
+}
+
+.installationMetrics {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid rgba(242, 193, 107, 0.16);
+  background: rgba(242, 193, 107, 0.12);
+}
+
+.installationMetric {
+  display: grid;
+  gap: 10px;
+  min-height: 112px;
+  padding: clamp(18px, 2.2vw, 26px);
+  background: rgba(5, 5, 5, 0.68);
+}
+
+.installationMetric span,
+.installationPhase span {
+  color: rgba(255, 247, 234, 0.56);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.installationMetric strong {
+  color: #fff7e8;
+  font-size: clamp(1.08rem, 1.5vw, 1.4rem);
+  font-weight: 720;
+  line-height: 1.12;
+}
+
+.installationPhases {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(14px, 2vw, 22px);
+}
+
+.installationPhase {
+  display: grid;
+  gap: 12px;
+  min-height: 190px;
+  padding: clamp(20px, 2.6vw, 30px);
+  border: 1px solid rgba(255, 247, 234, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(5, 5, 5, 0.44);
+}
+
+.installationPhase strong {
+  color: #fff7e8;
+  font-size: clamp(1.18rem, 1.7vw, 1.62rem);
+  line-height: 1.08;
+}
+
+.installationPhase p {
+  margin: 0;
+  color: rgba(255, 247, 234, 0.66);
+  font-size: clamp(0.9rem, 1.05vw, 1rem);
+  line-height: 1.58;
+}
+
+.technicalSection {
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 100dvh;
+  background: #050505;
+}
+
+.technicalMedia {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: #050505;
+}
+
+.technicalVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% center;
+  transform: translateZ(0);
+  will-change: opacity;
+}
+
+.technicalReverseVideo {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.technicalScrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.86) 0%, rgba(5, 5, 5, 0.58) 33%, rgba(5, 5, 5, 0.16) 64%, rgba(5, 5, 5, 0.5) 100%),
+    linear-gradient(180deg, rgba(5, 5, 5, 0.64) 0%, rgba(5, 5, 5, 0.04) 34%, rgba(5, 5, 5, 0.78) 100%);
+}
+
+.technicalShell {
+  display: grid;
+  width: min(920px, calc(100% - clamp(32px, 8vw, 132px)));
+  height: 100%;
+  min-height: 0;
+  margin-inline: clamp(28px, 4.2vw, 82px) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 250px);
+  gap: clamp(22px, 3vw, 42px);
+  align-content: center;
+  align-items: center;
+  padding: clamp(26px, 5dvh, 56px) 0;
+}
+
+.technicalHeader {
+  grid-column: 1;
+  grid-row: 1;
+  max-width: 580px;
+}
+
+.technicalPanelStack {
+  position: relative;
+  grid-column: 1;
+  grid-row: 2;
+  min-height: clamp(208px, 20dvh, 260px);
+  margin-top: clamp(16px, 2.4dvh, 28px);
+}
+
+.technicalPanel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  max-width: 100%;
+  padding: clamp(22px, 2.7vw, 32px);
+  border: 1px solid rgba(242, 193, 107, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(5, 5, 5, 0.58);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.24);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px);
+  transition:
+    opacity 280ms ease,
+    transform 280ms ease,
+    visibility 280ms ease;
+  visibility: hidden;
+}
+
+.technicalPanel[data-active="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.technicalPanelEyebrow {
+  color: rgba(242, 193, 107, 0.9);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 720;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.technicalPanelTitle {
+  color: #fff7e8;
+  font-size: clamp(1.48rem, 2.4vw, 2.36rem);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.technicalPanel p {
+  max-width: 480px;
+  margin: 0;
+  color: rgba(255, 247, 234, 0.72);
+  font-size: clamp(0.94rem, 1.14vw, 1.08rem);
+  line-height: 1.58;
+}
+
+.technicalPanelMetric {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(78, 145, 168, 0.32);
+  border-radius: 6px;
+  color: rgba(195, 231, 239, 0.94);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 720;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.technicalTimeline {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  grid-template-columns: auto 1px minmax(150px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  justify-self: end;
+  min-height: min(520px, 68dvh);
+}
+
+.technicalCounter {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  color: #fff7e8;
+  font-family: var(--font-mono);
+  font-weight: 720;
+  line-height: 1;
+}
+
+.technicalCounter span {
+  font-size: clamp(1.28rem, 2vw, 1.9rem);
+}
+
+.technicalCounter strong {
+  color: rgba(242, 193, 107, 0.54);
+  font-size: 0.84rem;
+}
+
+.technicalProgressTrack {
+  position: relative;
+  width: 1px;
+  background: rgba(255, 247, 234, 0.16);
+  overflow: hidden;
+}
+
+.technicalProgressFill {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: linear-gradient(180deg, #f2c16b, rgba(78, 145, 168, 0.88));
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform 280ms ease;
+}
+
+.technicalStepList {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.technicalStepList li {
+  display: grid;
+  gap: 5px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid rgba(255, 247, 234, 0.1);
+  opacity: 0.48;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.technicalStepList li[data-active="true"],
+.technicalStepList li[data-complete="true"] {
+  opacity: 1;
+}
+
+.technicalStepList li[data-active="true"] {
+  transform: translateX(-6px);
+}
+
+.technicalStepList span {
+  color: rgba(242, 193, 107, 0.82);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.technicalStepList strong {
+  color: rgba(255, 247, 234, 0.84);
+  font-size: clamp(0.7rem, 0.82vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1100px) {
+  .installationShell {
+    grid-template-columns: 1fr;
+  }
+
+  .installationChecklist {
+    align-self: auto;
+  }
+
+  .technicalShell {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(760px, calc(100% - 40px));
+    margin-inline: auto;
+    gap: 26px;
+  }
+
+  .technicalTimeline {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    min-height: auto;
+    grid-template-columns: auto 1fr;
+    justify-self: stretch;
+  }
+
+  .technicalProgressTrack {
+    display: none;
+  }
+
+  .technicalStepList {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .technicalStepList li {
+    min-height: 76px;
+    padding: 10px;
+    border: 1px solid rgba(255, 247, 234, 0.12);
+    border-radius: 8px;
+    background: rgba(5, 5, 5, 0.5);
+  }
+
+  .technicalStepList li[data-active="true"] {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 760px) {
+  .installationSection {
+    min-height: 100svh;
+  }
+
+  .technicalSection {
+    height: 100svh;
+    max-height: 100svh;
+    min-height: 100svh;
+  }
+
+  .installationShell {
+    width: min(100% - 28px, 680px);
+    min-height: 100svh;
+    padding: 34px 0;
+  }
+
+  .technicalShell {
+    width: min(100% - 28px, 680px);
+    height: 100%;
+    min-height: 0;
+    padding: 24px 0;
+  }
+
+  .installationShell {
+    gap: 12px;
+    padding: 24px 0;
+  }
+
+  .installationTitle,
+  .technicalTitle {
+    max-width: 11ch;
+    font-size: clamp(2.34rem, 13vw, 4.1rem);
+  }
+
+  .installationTitle {
+    max-width: 12ch;
+    font-size: clamp(2.46rem, 10.9vw, 3.25rem);
+  }
+
+  .installationCopy,
+  .technicalCopy {
+    font-size: 0.98rem;
+    line-height: 1.58;
+  }
+
+  .installationCopy {
+    margin-top: 14px;
+    font-size: 0.92rem;
+    line-height: 1.46;
+  }
+
+  .installationChecklist {
+    display: none;
+  }
+
+  .installationMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .installationMetric {
+    gap: 7px;
+    min-height: 64px;
+    padding: 10px 12px;
+  }
+
+  .installationMetric span,
+  .installationPhase span {
+    font-size: 0.6rem;
+  }
+
+  .installationMetric strong {
+    font-size: 0.98rem;
+  }
+
+  .installationPhases {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .installationPhase {
+    min-height: auto;
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .installationPhase strong {
+    font-size: 0.94rem;
+  }
+
+  .installationPhase p {
+    font-size: 0.72rem;
+    line-height: 1.32;
+  }
+
+  .technicalVideo {
+    object-position: 66% center;
+  }
+
+  .technicalScrim {
+    background:
+      linear-gradient(180deg, rgba(5, 5, 5, 0.82) 0%, rgba(5, 5, 5, 0.28) 42%, rgba(5, 5, 5, 0.88) 100%),
+      linear-gradient(90deg, rgba(5, 5, 5, 0.38), rgba(5, 5, 5, 0.1));
+  }
+
+  .technicalHeader {
+    align-self: start;
+  }
+
+  .technicalPanelStack {
+    min-height: 248px;
+    margin-top: 18px;
+  }
+
+  .technicalPanel {
+    padding: 18px;
+  }
+
+  .technicalTimeline {
+    grid-template-columns: 1fr;
+  }
+
+  .technicalCounter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .technicalStepList {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .technicalStepList li {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    align-items: center;
+    justify-items: center;
+    padding: 8px 4px;
+  }
+
+  .technicalStepList strong {
+    display: none;
+  }
+}
+
+@media (min-width: 761px) and (max-height: 820px) {
+  .installationShell,
+  .technicalShell {
+    padding: 22px 0;
+  }
+
+  .installationShell {
+    gap: 12px;
+  }
+
+  .installationTitle,
+  .technicalTitle {
+    font-size: clamp(2.3rem, 4.45vw, 4.05rem);
+  }
+
+  .installationCopy,
+  .technicalCopy {
+    margin-top: 12px;
+    font-size: 0.96rem;
+    line-height: 1.5;
+  }
+
+  .installationChecklist {
+    gap: 10px;
+    padding: 16px 18px;
+  }
+
+  .installationChecklist::before {
+    inset: 12px;
+  }
+
+  .installationChecklistHeader {
+    padding-bottom: 10px;
+  }
+
+  .installationChecklistHeader span,
+  .installationChecklistHeader strong,
+  .installationSignal span,
+  .installationChecklistItem span,
+  .installationChecklistIndex {
+    font-size: 0.58rem;
+  }
+
+  .installationChecklistHeader strong {
+    padding: 5px 7px;
+  }
+
+  .installationSignal {
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .installationSignal strong {
+    font-size: 0.82rem;
+  }
+
+  .installationChecklistList {
+    gap: 8px;
+  }
+
+  .installationChecklistItem {
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+
+  .installationChecklistIndex {
+    width: 28px;
+    height: 28px;
+  }
+
+  .installationChecklistItem div {
+    gap: 4px;
+  }
+
+  .installationChecklistItem strong {
+    font-size: 1.02rem;
+  }
+
+  .installationChecklistItem p {
+    font-size: 0.78rem;
+    line-height: 1.34;
+  }
+
+  .installationMetrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .installationMetric {
+    gap: 7px;
+    min-height: 68px;
+    padding: 12px 14px;
+  }
+
+  .installationPhases {
+    gap: 12px;
+  }
+
+  .installationPhase {
+    min-height: 132px;
+    gap: 8px;
+    padding: 15px;
+  }
+
+  .installationPhase strong {
+    font-size: 1.08rem;
+  }
+
+  .installationPhase p {
+    font-size: 0.82rem;
+    line-height: 1.42;
+  }
+
+  .technicalShell {
+    gap: 26px;
+  }
+
+  .technicalPanelStack {
+    min-height: 210px;
+    margin-top: 18px;
+  }
+
+  .technicalPanel {
+    gap: 10px;
+    padding: 18px;
+  }
+
+  .technicalPanelTitle {
+    font-size: clamp(1.3rem, 2vw, 1.9rem);
+  }
+
+  .technicalPanel p {
+    font-size: 0.9rem;
+    line-height: 1.46;
+  }
+
+  .technicalTimeline {
+    min-height: min(410px, 62dvh);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .technicalPanel,
+  .technicalProgressFill,
+  .technicalStepList li {
+    animation: none;
+    transition: none;
+  }
+}

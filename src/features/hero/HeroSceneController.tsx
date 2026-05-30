@@ -22,6 +22,8 @@ const VIDEO_TRANSITION_MIN_TIMEOUT_MS = 7600;
 const VIDEO_TRANSITION_PROGRESS_EPSILON_SECONDS = 0.025;
 const INITIAL_FORWARD_WARMUP_DELAY_MS = 4800;
 const INITIAL_FORWARD_WARMUP_IDLE_TIMEOUT_MS = 2400;
+const HERO_INPUT_ALIGNMENT_TOLERANCE_PX = 2;
+const HERO_VIDEO_FALLBACK_ASPECT_RATIO = 16 / 9;
 
 type HeroVideoStep =
   | "start"
@@ -48,6 +50,37 @@ type IdleCallbackWindow = Window & {
   cancelIdleCallback?: (handle: number) => void;
 };
 
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+const parseObjectPositionAxis = (
+  token: string | undefined,
+  startKeyword: string,
+  endKeyword: string,
+) => {
+  if (!token || token === "center") {
+    return 0.5;
+  }
+
+  if (token === startKeyword) {
+    return 0;
+  }
+
+  if (token === endKeyword) {
+    return 1;
+  }
+
+  if (token.endsWith("%")) {
+    const value = Number.parseFloat(token);
+
+    if (Number.isFinite(value)) {
+      return clampNumber(value / 100, 0, 1);
+    }
+  }
+
+  return 0.5;
+};
+
 const scrollCueCopy = {
   down: {
     ariaLabel: "Scroll down to continue",
@@ -62,17 +95,7 @@ const scrollCueCopy = {
   direction: string;
 }>;
 
-type HeroSceneControllerProps = {
-  reverseSrc: string;
-  reverseToCapabilitySrc: string;
-  reverseToOperationsSrc: string;
-};
-
-export function HeroSceneController({
-  reverseSrc,
-  reverseToCapabilitySrc,
-  reverseToOperationsSrc,
-}: HeroSceneControllerProps) {
+export function HeroSceneController() {
   const videoStepRef = useRef<HeroVideoStep>("start");
 
   useEffect(() => {
@@ -152,14 +175,12 @@ export function HeroSceneController({
     let isPageScrollLocked = false;
     let initialForwardWarmupTimeoutId: number | null = null;
     let initialForwardWarmupIdleId: number | null = null;
-    const deferredPreloadRemovers: Array<() => void> = [];
     const warmedDeferredVideos = new Set<HTMLVideoElement>();
     let lockedScrollX = window.scrollX;
     let lockedScrollY = window.scrollY;
-    let originalRootOverflow = "";
-    let originalBodyOverflow = "";
     let transitionWatchdogFrameId: number | null = null;
     let transitionWatchdogTimeoutId: number | null = null;
+    let traceLayoutFrameId: number | null = null;
     let removeTransitionVideoListeners: () => void = () => undefined;
     let activeTransition:
       | {
@@ -228,6 +249,138 @@ export function HeroSceneController({
       return fallbackDuration;
     };
 
+    const getVideoContentRect = () => {
+      const videoRect = forwardVideo.getBoundingClientRect();
+      const naturalAspectRatio =
+        forwardVideo.videoWidth > 0 && forwardVideo.videoHeight > 0
+          ? forwardVideo.videoWidth / forwardVideo.videoHeight
+          : HERO_VIDEO_FALLBACK_ASPECT_RATIO;
+      const containerAspectRatio = videoRect.width / videoRect.height;
+      const contentWidth =
+        containerAspectRatio > naturalAspectRatio
+          ? videoRect.width
+          : videoRect.height * naturalAspectRatio;
+      const contentHeight =
+        containerAspectRatio > naturalAspectRatio
+          ? videoRect.width / naturalAspectRatio
+          : videoRect.height;
+      const [positionXToken, positionYToken] = window
+        .getComputedStyle(forwardVideo)
+        .objectPosition.trim()
+        .split(/\s+/);
+      const positionX = parseObjectPositionAxis(
+        positionXToken,
+        "left",
+        "right",
+      );
+      const positionY = parseObjectPositionAxis(
+        positionYToken,
+        "top",
+        "bottom",
+      );
+
+      return {
+        height: contentHeight,
+        left: videoRect.left + (videoRect.width - contentWidth) * positionX,
+        top: videoRect.top + (videoRect.height - contentHeight) * positionY,
+        width: contentWidth,
+      };
+    };
+
+    const layoutAnchoredDetailTraces = (kind?: DetailOverlayKind) => {
+      const contentRect = getVideoContentRect();
+      const overlayKinds = kind
+        ? [kind]
+        : (["capability", "operations"] satisfies DetailOverlayKind[]);
+
+      overlayKinds.forEach((overlayKind) => {
+        const overlayRoot = detailOverlayRoots[overlayKind];
+
+        if (!overlayRoot) {
+          return;
+        }
+
+        const overlayRect = overlayRoot.getBoundingClientRect();
+        const traceGroups = overlayRoot.querySelectorAll<HTMLElement>(
+          "[data-video-anchor-x][data-video-anchor-y]",
+        );
+
+        traceGroups.forEach((traceGroup) => {
+          const panel = traceGroup.closest<HTMLElement>(
+            "[data-capability-panel], [data-operations-panel]",
+          );
+          const anchorX = Number.parseFloat(
+            traceGroup.dataset.videoAnchorX ?? "",
+          );
+          const anchorY = Number.parseFloat(
+            traceGroup.dataset.videoAnchorY ?? "",
+          );
+
+          if (
+            !panel ||
+            !Number.isFinite(anchorX) ||
+            !Number.isFinite(anchorY) ||
+            panel.offsetWidth <= 0 ||
+            panel.offsetHeight <= 0
+          ) {
+            return;
+          }
+
+          const panelLeft = overlayRect.left + panel.offsetLeft;
+          const panelTop = overlayRect.top + panel.offsetTop;
+          const panelRight = panelLeft + panel.offsetWidth;
+          const panelBottom = panelTop + panel.offsetHeight;
+          const anchorClientX =
+            contentRect.left + clampNumber(anchorX, 0, 1) * contentRect.width;
+          const anchorClientY =
+            contentRect.top + clampNumber(anchorY, 0, 1) * contentRect.height;
+          const shouldUseLeftEdge =
+            anchorClientX < panelLeft ||
+            (anchorClientX <= panelRight &&
+              Math.abs(anchorClientX - panelLeft) <
+                Math.abs(anchorClientX - panelRight));
+          const startClientX = shouldUseLeftEdge ? panelLeft : panelRight;
+          const verticalInset = Math.min(28, panel.offsetHeight / 3);
+          const minStartY = panelTop + verticalInset;
+          const maxStartY = panelBottom - verticalInset;
+          const startClientY =
+            minStartY <= maxStartY
+              ? clampNumber(anchorClientY, minStartY, maxStartY)
+              : panelTop + panel.offsetHeight / 2;
+          const deltaX = anchorClientX - startClientX;
+          const deltaY = anchorClientY - startClientY;
+          const traceWidth = Math.hypot(deltaX, deltaY);
+
+          traceGroup.style.right = "auto";
+          traceGroup.style.left = `${startClientX - panelLeft}px`;
+          traceGroup.style.top = `${startClientY - panelTop}px`;
+          traceGroup.style.width = `${traceWidth}px`;
+          traceGroup.style.transform = `rotate(${Math.atan2(deltaY, deltaX)}rad)`;
+          traceGroup.style.transformOrigin = "left center";
+        });
+      });
+    };
+
+    const scheduleAnchoredTraceLayout = () => {
+      if (traceLayoutFrameId !== null) {
+        window.cancelAnimationFrame(traceLayoutFrameId);
+      }
+
+      traceLayoutFrameId = window.requestAnimationFrame(() => {
+        traceLayoutFrameId = null;
+        layoutAnchoredDetailTraces();
+      });
+    };
+
+    const cancelAnchoredTraceLayout = () => {
+      if (traceLayoutFrameId === null) {
+        return;
+      }
+
+      window.cancelAnimationFrame(traceLayoutFrameId);
+      traceLayoutFrameId = null;
+    };
+
     const lockPageScroll = () => {
       hideScrollCue();
 
@@ -238,10 +391,6 @@ export function HeroSceneController({
       isPageScrollLocked = true;
       lockedScrollX = window.scrollX;
       lockedScrollY = window.scrollY;
-      originalRootOverflow = document.documentElement.style.overflow;
-      originalBodyOverflow = document.body.style.overflow;
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
     };
 
     const unlockPageScroll = () => {
@@ -250,8 +399,6 @@ export function HeroSceneController({
       }
 
       isPageScrollLocked = false;
-      document.documentElement.style.overflow = originalRootOverflow;
-      document.body.style.overflow = originalBodyOverflow;
       lastScrollY = window.scrollY;
     };
 
@@ -264,6 +411,33 @@ export function HeroSceneController({
       lastScrollY = lockedScrollY;
     };
 
+    const isHeroSceneActive = () => {
+      const rect = root.getBoundingClientRect();
+
+      return (
+        Math.abs(rect.top) <= HERO_INPUT_ALIGNMENT_TOLERANCE_PX &&
+        rect.bottom >= window.innerHeight - HERO_INPUT_ALIGNMENT_TOLERANCE_PX
+      );
+    };
+
+    const isExternalHashNavigation = () => {
+      const { hash } = window.location;
+
+      if (!hash) {
+        return false;
+      }
+
+      try {
+        const target = document.getElementById(
+          decodeURIComponent(hash.slice(1)),
+        );
+
+        return Boolean(target && !root.contains(target));
+      } catch {
+        return false;
+      }
+    };
+
     const showVideoLayer = (activeVideo: HTMLVideoElement) => {
       gsap.killTweensOf(videoLayers);
       gsap.set(videoLayers, { opacity: 0 });
@@ -271,77 +445,6 @@ export function HeroSceneController({
     };
 
     const showForwardVideo = () => showVideoLayer(forwardVideo);
-
-    const getVideoSourceType = (href: string) =>
-      href.endsWith(".webm") ? "video/webm" : "video/mp4";
-
-    const preloadVideoSource = (
-      href: string,
-      fetchPriority: "high" | "low" = "high",
-      type = getVideoSourceType(href),
-    ) => {
-      const absoluteHref = new URL(href, window.location.href).href;
-      const existingPreloadLink = Array.from(
-        document.head.querySelectorAll<HTMLLinkElement>(
-          'link[rel="preload"][as="video"]',
-        ),
-      ).find((link) => link.href === absoluteHref);
-
-      if (existingPreloadLink) {
-        return () => undefined;
-      }
-
-      const preloadLink = document.createElement("link");
-      preloadLink.rel = "preload";
-      preloadLink.as = "video";
-      preloadLink.href = href;
-      preloadLink.type = type;
-      preloadLink.crossOrigin = "anonymous";
-      preloadLink.setAttribute("fetchpriority", fetchPriority);
-      document.head.append(preloadLink);
-
-      return () => preloadLink.remove();
-    };
-
-    const getPreferredVideoSource = (
-      video: HTMLVideoElement,
-      fallbackHref: string,
-    ) => {
-      const sources = Array.from(video.querySelectorAll("source"));
-
-      for (const source of sources) {
-        const href = source.getAttribute("src");
-
-        if (!href) {
-          continue;
-        }
-
-        if (source.media && !window.matchMedia(source.media).matches) {
-          continue;
-        }
-
-        if (
-          source.type &&
-          typeof video.canPlayType === "function" &&
-          video.canPlayType(source.type) === ""
-        ) {
-          continue;
-        }
-
-        return {
-          href,
-          type: source.type || getVideoSourceType(href),
-        };
-      }
-
-      const href =
-        video.currentSrc || video.getAttribute("src") || fallbackHref;
-
-      return {
-        href,
-        type: getVideoSourceType(href),
-      };
-    };
 
     const warmVideoElement = (video: HTMLVideoElement) => {
       video.preload = "auto";
@@ -351,23 +454,13 @@ export function HeroSceneController({
       }
     };
 
-    const warmDeferredVideo = (video: HTMLVideoElement, href: string) => {
+    const warmDeferredVideo = (video: HTMLVideoElement) => {
       if (warmedDeferredVideos.has(video)) {
         return;
       }
 
       warmedDeferredVideos.add(video);
-      const source = getPreferredVideoSource(video, href);
-      deferredPreloadRemovers.push(
-        preloadVideoSource(source.href, "low", source.type),
-      );
       warmVideoElement(video);
-    };
-
-    const removeDeferredPreloadLinks = () => {
-      deferredPreloadRemovers.splice(0).forEach((removePreloadLink) => {
-        removePreloadLink();
-      });
     };
 
     const cancelInitialForwardWarmup = () => {
@@ -472,11 +565,8 @@ export function HeroSceneController({
         timeoutId = window.setTimeout(settle, timeoutMs);
       });
 
-    const waitForDeferredVideoFrameReady = (
-      video: HTMLVideoElement,
-      href: string,
-    ) => {
-      warmDeferredVideo(video, href);
+    const waitForDeferredVideoFrameReady = (video: HTMLVideoElement) => {
+      warmDeferredVideo(video);
 
       return waitForVideoFrameReady(video, DEFERRED_VIDEO_READY_TIMEOUT_MS);
     };
@@ -594,35 +684,53 @@ export function HeroSceneController({
       const markers = select(`[data-${kind}-marker]`);
       const sweeps = select(`[data-${kind}-sweep]`);
 
+      layoutAnchoredDetailTraces(kind);
+
       if (reducedMotion) {
         gsap.set([overlayRoot, ...panels, ...traces, ...markers], {
           autoAlpha: 1,
           clearProps: "transform,filter",
         });
-        gsap.set(sweeps, { autoAlpha: 0 });
+
+        if (sweeps.length > 0) {
+          gsap.set(sweeps, { autoAlpha: 0 });
+        }
+
         return;
       }
 
       gsap.set(overlayRoot, { autoAlpha: 1 });
-      gsap.set(panels, {
-        autoAlpha: 0,
-        filter: "blur(14px)",
-        scale: 0.96,
-        y: 24,
-      });
-      gsap.set(traces, {
-        opacity: 0,
-        scaleX: 0,
-        transformOrigin: "left center",
-      });
-      gsap.set(markers, {
-        opacity: 0,
-        scale: 0.42,
-      });
-      gsap.set(sweeps, {
-        autoAlpha: 0,
-        xPercent: -120,
-      });
+
+      if (panels.length > 0) {
+        gsap.set(panels, {
+          autoAlpha: 0,
+          filter: "blur(14px)",
+          scale: 0.96,
+          y: 24,
+        });
+      }
+
+      if (traces.length > 0) {
+        gsap.set(traces, {
+          opacity: 0,
+          scaleX: 0,
+          transformOrigin: "left center",
+        });
+      }
+
+      if (markers.length > 0) {
+        gsap.set(markers, {
+          opacity: 0,
+          scale: 0.42,
+        });
+      }
+
+      if (sweeps.length > 0) {
+        gsap.set(sweeps, {
+          autoAlpha: 0,
+          xPercent: -120,
+        });
+      }
 
       const detailTimeline = gsap.timeline({
         defaults: {
@@ -630,8 +738,8 @@ export function HeroSceneController({
         },
       });
 
-      detailTimeline
-        .to(
+      if (panels.length > 0) {
+        detailTimeline.to(
           panels,
           {
             autoAlpha: 1,
@@ -642,8 +750,11 @@ export function HeroSceneController({
             y: 0,
           },
           0.08,
-        )
-        .to(
+        );
+      }
+
+      if (traces.length > 0) {
+        detailTimeline.to(
           traces,
           {
             duration: 0.68,
@@ -652,8 +763,11 @@ export function HeroSceneController({
             stagger: 0.16,
           },
           0.22,
-        )
-        .to(
+        );
+      }
+
+      if (markers.length > 0) {
+        detailTimeline.to(
           markers,
           {
             duration: 0.52,
@@ -663,22 +777,27 @@ export function HeroSceneController({
             stagger: 0.14,
           },
           0.34,
-        )
-        .to(
-          sweeps,
-          {
-            autoAlpha: 0.78,
-            duration: 0.86,
-            ease: "power2.inOut",
-            stagger: 0.18,
-            xPercent: 135,
-          },
-          0.42,
-        )
-        .set(sweeps, {
-          autoAlpha: 0,
-          xPercent: -120,
-        });
+        );
+      }
+
+      if (sweeps.length > 0) {
+        detailTimeline
+          .to(
+            sweeps,
+            {
+              autoAlpha: 0.78,
+              duration: 0.86,
+              ease: "power2.inOut",
+              stagger: 0.18,
+              xPercent: 135,
+            },
+            0.42,
+          )
+          .set(sweeps, {
+            autoAlpha: 0,
+            xPercent: -120,
+          });
+      }
     };
 
     const hideDetailOverlay = (kind: DetailOverlayKind) => {
@@ -1181,10 +1300,7 @@ export function HeroSceneController({
     ) => {
       prepareReverseFrame(reverseToStartVideo, 0);
 
-      void waitForDeferredVideoFrameReady(
-        reverseToStartVideo,
-        reverseSrc,
-      ).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToStartVideo).then(() => {
         if (isDisposed || videoStepRef.current !== expectedStep) {
           return;
         }
@@ -1210,10 +1326,7 @@ export function HeroSceneController({
     ) => {
       prepareReverseFrame(reverseToCapabilityVideo, 0);
 
-      void waitForDeferredVideoFrameReady(
-        reverseToCapabilityVideo,
-        reverseToCapabilitySrc,
-      ).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToCapabilityVideo).then(() => {
         if (isDisposed || videoStepRef.current !== expectedStep) {
           return;
         }
@@ -1238,10 +1351,7 @@ export function HeroSceneController({
     const settleAtFinal = (expectedStep: HeroVideoStep) => {
       prepareReverseFrame(reverseToOperationsVideo, 0);
 
-      void waitForDeferredVideoFrameReady(
-        reverseToOperationsVideo,
-        reverseToOperationsSrc,
-      ).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToOperationsVideo).then(() => {
         if (isDisposed || videoStepRef.current !== expectedStep) {
           return;
         }
@@ -1658,10 +1768,7 @@ export function HeroSceneController({
         video: reverseToStartVideo,
       });
 
-      void waitForDeferredVideoFrameReady(
-        reverseToStartVideo,
-        reverseSrc,
-      ).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToStartVideo).then(() => {
         if (isDisposed || videoStepRef.current !== "reversingToStart") {
           return;
         }
@@ -1715,10 +1822,7 @@ export function HeroSceneController({
         video: reverseToCapabilityVideo,
       });
 
-      void waitForDeferredVideoFrameReady(
-        reverseToCapabilityVideo,
-        reverseToCapabilitySrc,
-      ).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToCapabilityVideo).then(() => {
         if (isDisposed || videoStepRef.current !== "reversingToCapability") {
           return;
         }
@@ -1772,10 +1876,7 @@ export function HeroSceneController({
         video: reverseToOperationsVideo,
       });
 
-      void waitForDeferredVideoFrameReady(
-        reverseToOperationsVideo,
-        reverseToOperationsSrc,
-      ).then(() => {
+      void waitForDeferredVideoFrameReady(reverseToOperationsVideo).then(() => {
         if (isDisposed || videoStepRef.current !== "reversingToOperations") {
           return;
         }
@@ -1869,8 +1970,25 @@ export function HeroSceneController({
 
       const nextScrollY = window.scrollY;
       const deltaY = nextScrollY - lastScrollY;
+      const wasHeroAligned =
+        lastScrollY <= HERO_INPUT_ALIGNMENT_TOLERANCE_PX;
 
       lastScrollY = nextScrollY;
+
+      if (isExternalHashNavigation()) {
+        return;
+      }
+
+      if (
+        !wasHeroAligned ||
+        nextScrollY > HERO_INPUT_ALIGNMENT_TOLERANCE_PX
+      ) {
+        return;
+      }
+
+      if (!isHeroSceneActive()) {
+        return;
+      }
 
       if (Math.abs(deltaY) < SCROLL_DIRECTION_THRESHOLD) {
         return;
@@ -1886,6 +2004,10 @@ export function HeroSceneController({
       }
 
       if (Math.abs(event.deltaY) < SCROLL_DIRECTION_THRESHOLD) {
+        return;
+      }
+
+      if (!isHeroSceneActive()) {
         return;
       }
 
@@ -1923,6 +2045,10 @@ export function HeroSceneController({
         return;
       }
 
+      if (!isHeroSceneActive()) {
+        return;
+      }
+
       const direction = deltaY > 0 ? "down" : "up";
 
       if (!canStartDirection(direction)) {
@@ -1951,6 +2077,10 @@ export function HeroSceneController({
         return;
       }
 
+      if (!isHeroSceneActive()) {
+        return;
+      }
+
       if (isPageScrollLocked) {
         event.preventDefault();
         return;
@@ -1974,6 +2104,17 @@ export function HeroSceneController({
       });
     }
 
+    const handleAnchoredTraceLayout = () => {
+      scheduleAnchoredTraceLayout();
+    };
+
+    window.addEventListener("resize", handleAnchoredTraceLayout);
+    window.addEventListener("orientationchange", handleAnchoredTraceLayout);
+    videoLayers.forEach((video) => {
+      video.addEventListener("loadedmetadata", handleAnchoredTraceLayout);
+    });
+    scheduleAnchoredTraceLayout();
+
     addScrollListeners();
 
     return () => {
@@ -1981,14 +2122,19 @@ export function HeroSceneController({
       cancelTransitionWatchdog();
       cancelForwardStopMonitor();
       cancelReverseStopMonitor();
+      cancelAnchoredTraceLayout();
       killAllDetailOverlayTweens();
       unlockPageScroll();
       removeScrollListeners();
-      removeDeferredPreloadLinks();
       cancelInitialForwardWarmup();
+      window.removeEventListener("resize", handleAnchoredTraceLayout);
+      window.removeEventListener("orientationchange", handleAnchoredTraceLayout);
+      videoLayers.forEach((video) => {
+        video.removeEventListener("loadedmetadata", handleAnchoredTraceLayout);
+      });
       forwardVideo.removeEventListener("loadedmetadata", switchToStartFrame);
     };
-  }, [reverseSrc, reverseToCapabilitySrc, reverseToOperationsSrc]);
+  }, []);
 
   useGSAP(
     () => {

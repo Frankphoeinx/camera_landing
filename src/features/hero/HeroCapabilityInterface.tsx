@@ -6,6 +6,7 @@ const capabilityPanels = [
     className: styles.capabilityPanelAi,
     traceClassName: styles.capabilityTraceAi,
     markerClassName: styles.capabilityMarkerAi,
+    videoAnchor: { x: 0.536, y: 0.149 },
     eyebrow: "AI PERIMETER",
     title: "Human and vehicle recognition",
     copy: "Filters animals, rain, branches, and passing shadows before an alert reaches the estate.",
@@ -16,6 +17,7 @@ const capabilityPanels = [
     className: styles.capabilityPanelNight,
     traceClassName: styles.capabilityTraceNight,
     markerClassName: styles.capabilityMarkerNight,
+    videoAnchor: { x: 0.512, y: 0.634 },
     eyebrow: "NIGHT WATCH",
     title: "IR flood and color low-light",
     copy: "Dual illuminators keep the driveway, gate, and garden edges visible without police-style glare.",
@@ -26,6 +28,7 @@ const capabilityPanels = [
     className: styles.capabilityPanelPtz,
     traceClassName: styles.capabilityTracePtz,
     markerClassName: styles.capabilityMarkerPtz,
+    videoAnchor: { x: 0.662, y: 0.563 },
     eyebrow: "PTZ COVERAGE",
     title: "Auto patrol with manual override",
     copy: "The lens sweeps blind spots, locks on motion, and returns to the guard route automatically.",
@@ -48,6 +51,8 @@ export function HeroCapabilityInterface() {
         >
           <span
             className={`${styles.capabilityTraceGroup} ${panel.traceClassName}`}
+            data-video-anchor-x={panel.videoAnchor.x}
+            data-video-anchor-y={panel.videoAnchor.y}
             aria-hidden="true"
           >
             <span className={styles.capabilityTrace} data-capability-trace />

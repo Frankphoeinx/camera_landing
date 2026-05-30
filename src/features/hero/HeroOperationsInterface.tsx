@@ -6,6 +6,7 @@ const operationPanels = [
     className: styles.operationsPanelPatrol,
     traceClassName: styles.operationsTracePatrol,
     markerClassName: styles.operationsMarkerPatrol,
+    videoAnchor: { x: 0.314, y: 0.307 },
     eyebrow: "AUTO PATROL",
     title: "Preset routes across blind zones",
     copy: "Cycles gate, driveway, garden edge, and terrace views without waiting for manual control.",
@@ -23,6 +24,7 @@ const operationPanels = [
     className: styles.operationsPanelAlerts,
     traceClassName: styles.operationsTraceAlerts,
     markerClassName: styles.operationsMarkerAlerts,
+    videoAnchor: { x: 0.23, y: 0.536 },
     eyebrow: "SMART ALERTS",
     title: "Zone-based event escalation",
     copy: "Separates driveway approach, perimeter crossing, and loitering before sending a priority alert.",
@@ -40,6 +42,7 @@ const operationPanels = [
     className: styles.operationsPanelArchive,
     traceClassName: styles.operationsTraceArchive,
     markerClassName: styles.operationsMarkerArchive,
+    videoAnchor: { x: 0.298, y: 0.589 },
     eyebrow: "EVENT MEMORY",
     title: "Encrypted local and cloud history",
     copy: "Stores verified clips with timestamp, zone, subject type, and patrol state for fast review.",
@@ -69,6 +72,8 @@ export function HeroOperationsInterface() {
         >
           <span
             className={`${styles.capabilityTraceGroup} ${panel.traceClassName}`}
+            data-video-anchor-x={panel.videoAnchor.x}
+            data-video-anchor-y={panel.videoAnchor.y}
             aria-hidden="true"
           >
             <span className={styles.capabilityTrace} data-operations-trace />

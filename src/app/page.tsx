@@ -1,4 +1,5 @@
 import { HeroScene } from "@/features/hero";
+import { InstallationSection, TechnicalScrollScene } from "@/features/landing";
 
 export default function Home() {
   return (
@@ -13,6 +14,14 @@ export default function Home() {
         reverseToOperationsSrc="/media/videos/hero-arrival-reverse-final-to-10.3b1879c2.mp4"
         reverseToOperationsSrcWebm="/media/videos/hero-arrival-reverse-final-to-10.35fadbe2.webm"
         poster="/media/images/hero-arrival-poster.86331ef3.webp"
+      />
+      <InstallationSection />
+      <TechnicalScrollScene
+        mp4Src="/media/videos/camera-technical.ff528cc4.mp4"
+        reverseMp4Src="/media/videos/camera-technical-reverse.9c204762.mp4"
+        reverseWebmSrc="/media/videos/camera-technical-reverse.1c12908a.webm"
+        webmSrc="/media/videos/camera-technical.46fb894a.webm"
+        poster="/media/images/camera-technical-poster.2dc1c5f8.webp"
       />
     </main>
   );

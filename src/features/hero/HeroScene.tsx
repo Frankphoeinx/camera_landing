@@ -122,11 +122,7 @@ export function HeroScene({
         </span>
       </div>
 
-      <HeroSceneController
-        reverseSrc={reverseSrc}
-        reverseToCapabilitySrc={reverseToCapabilitySrc}
-        reverseToOperationsSrc={reverseToOperationsSrc}
-      />
+      <HeroSceneController />
     </section>
   );
 }
