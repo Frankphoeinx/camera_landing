@@ -14,13 +14,25 @@ const TRANSITION_WATCHDOG_BUFFER_MS = 2600;
 const TRANSITION_MIN_WATCHDOG_MS = 4200;
 const SCROLL_THRESHOLD = 8;
 const TOUCH_THRESHOLD = 22;
-const SCENE_ALIGNMENT_TOLERANCE_PX = 2;
+const SCENE_ALIGNMENT_TOLERANCE_PX = 24;
+const MODEL_WHEEL_TRIGGER_DELTA = 0.25;
+const MODEL_WHEEL_ACCUMULATED_TRIGGER_DELTA = 8;
+const MODEL_WHEEL_ACCUMULATION_IDLE_MS = 150;
+const MODEL_WHEEL_TRANSITION_LOCK_MS = 520;
+const MODEL_WHEEL_TAIL_DRAIN_MS = 90;
+const MODEL_WHEEL_NEW_IMPULSE_GAP_MS = 80;
+const MODEL_WHEEL_NEW_IMPULSE_MIN_DELTA = 12;
+const MODEL_WHEEL_NEW_IMPULSE_RATIO = 1.65;
+const WHEEL_LINE_HEIGHT_PX = 16;
+const WHEEL_DELTA_LINE_MODE = 1;
+const WHEEL_DELTA_PAGE_MODE = 2;
 const PLAYBACK_STOP_EARLY_SECONDS = 0.025;
 const VIDEO_LAYER_CROSSFADE_SECONDS = 0.22;
 const METADATA_WAIT_TIMEOUT_MS = 1800;
 const SEEK_WAIT_TIMEOUT_MS = 1400;
 
 type TechnicalSceneMode = "models" | "steps";
+type ScrollDirection = "down" | "up";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -97,6 +109,15 @@ export function TechnicalScrollController() {
     let isTransitioning = false;
     let isDisposed = false;
     let lastTouchY: number | null = null;
+    let isModelWheelTransitionLocked = false;
+    let isModelWheelTailDraining = false;
+    let modelWheelDirection: ScrollDirection | null = null;
+    let modelWheelAccumulatedDeltaY = 0;
+    let modelWheelLastEventTime = 0;
+    let modelWheelLastDeltaAbs = 0;
+    let modelWheelTransitionTimeoutId: number | null = null;
+    let modelWheelTailTimeoutId: number | null = null;
+    let modelWheelAccumulationResetTimeoutId: number | null = null;
     let warnedRecovery = false;
     let observer: IntersectionObserver | null = null;
 
@@ -112,6 +133,158 @@ export function TechnicalScrollController() {
         window.cancelAnimationFrame(stopFrameId);
         stopFrameId = null;
       }
+    };
+
+    const clearModelWheelTimers = () => {
+      if (modelWheelTransitionTimeoutId !== null) {
+        window.clearTimeout(modelWheelTransitionTimeoutId);
+        modelWheelTransitionTimeoutId = null;
+      }
+
+      if (modelWheelTailTimeoutId !== null) {
+        window.clearTimeout(modelWheelTailTimeoutId);
+        modelWheelTailTimeoutId = null;
+      }
+
+      if (modelWheelAccumulationResetTimeoutId !== null) {
+        window.clearTimeout(modelWheelAccumulationResetTimeoutId);
+        modelWheelAccumulationResetTimeoutId = null;
+      }
+    };
+
+    const clearModelWheelControl = () => {
+      isModelWheelTransitionLocked = false;
+      isModelWheelTailDraining = false;
+      modelWheelDirection = null;
+      modelWheelAccumulatedDeltaY = 0;
+      modelWheelLastEventTime = 0;
+      modelWheelLastDeltaAbs = 0;
+      clearModelWheelTimers();
+    };
+
+    const normalizeWheelDeltaY = (event: WheelEvent) => {
+      if (event.deltaMode === WHEEL_DELTA_LINE_MODE) {
+        return event.deltaY * WHEEL_LINE_HEIGHT_PX;
+      }
+
+      if (event.deltaMode === WHEEL_DELTA_PAGE_MODE) {
+        return event.deltaY * window.innerHeight;
+      }
+
+      return event.deltaY;
+    };
+
+    const getWheelDirection = (deltaY: number): ScrollDirection =>
+      deltaY > 0 ? "down" : "up";
+
+    const scheduleModelWheelTailRelease = () => {
+      if (!isModelWheelTailDraining) {
+        return;
+      }
+
+      if (modelWheelTailTimeoutId !== null) {
+        window.clearTimeout(modelWheelTailTimeoutId);
+      }
+
+      modelWheelTailTimeoutId = window.setTimeout(() => {
+        clearModelWheelControl();
+      }, MODEL_WHEEL_TAIL_DRAIN_MS);
+    };
+
+    const finishModelWheelTransition = () => {
+      if (!isModelWheelTransitionLocked) {
+        return;
+      }
+
+      isModelWheelTransitionLocked = false;
+      isModelWheelTailDraining = true;
+      modelWheelAccumulatedDeltaY = 0;
+
+      if (modelWheelTransitionTimeoutId !== null) {
+        window.clearTimeout(modelWheelTransitionTimeoutId);
+        modelWheelTransitionTimeoutId = null;
+      }
+
+      if (modelWheelAccumulationResetTimeoutId !== null) {
+        window.clearTimeout(modelWheelAccumulationResetTimeoutId);
+        modelWheelAccumulationResetTimeoutId = null;
+      }
+
+      scheduleModelWheelTailRelease();
+    };
+
+    const startModelWheelTransition = (
+      direction: ScrollDirection,
+      deltaAbs: number,
+    ) => {
+      isModelWheelTransitionLocked = true;
+      isModelWheelTailDraining = false;
+      modelWheelDirection = direction;
+      modelWheelAccumulatedDeltaY = 0;
+      modelWheelLastDeltaAbs = deltaAbs;
+
+      clearModelWheelTimers();
+      modelWheelTransitionTimeoutId = window.setTimeout(
+        finishModelWheelTransition,
+        MODEL_WHEEL_TRANSITION_LOCK_MS,
+      );
+    };
+
+    const resetModelWheelAccumulationAfterIdle = () => {
+      if (modelWheelAccumulationResetTimeoutId !== null) {
+        window.clearTimeout(modelWheelAccumulationResetTimeoutId);
+      }
+
+      modelWheelAccumulationResetTimeoutId = window.setTimeout(() => {
+        modelWheelAccumulatedDeltaY = 0;
+        modelWheelAccumulationResetTimeoutId = null;
+      }, MODEL_WHEEL_ACCUMULATION_IDLE_MS);
+    };
+
+    const getAccumulatedModelWheelDirection = (deltaY: number) => {
+      if (
+        modelWheelAccumulatedDeltaY !== 0 &&
+        Math.sign(modelWheelAccumulatedDeltaY) !== Math.sign(deltaY)
+      ) {
+        modelWheelAccumulatedDeltaY = 0;
+      }
+
+      modelWheelAccumulatedDeltaY += deltaY;
+      resetModelWheelAccumulationAfterIdle();
+
+      if (
+        Math.abs(modelWheelAccumulatedDeltaY) <
+        MODEL_WHEEL_ACCUMULATED_TRIGGER_DELTA
+      ) {
+        return null;
+      }
+
+      const direction = getWheelDirection(modelWheelAccumulatedDeltaY);
+      modelWheelAccumulatedDeltaY = 0;
+      resetModelWheelAccumulationAfterIdle();
+
+      return direction;
+    };
+
+    const isNewModelWheelImpulse = (
+      direction: ScrollDirection,
+      deltaAbs: number,
+      eventGapMs: number,
+    ) => {
+      if (direction !== modelWheelDirection) {
+        return deltaAbs >= MODEL_WHEEL_TRIGGER_DELTA;
+      }
+
+      if (eventGapMs >= MODEL_WHEEL_NEW_IMPULSE_GAP_MS) {
+        return deltaAbs >= MODEL_WHEEL_TRIGGER_DELTA;
+      }
+
+      return (
+        deltaAbs >= MODEL_WHEEL_NEW_IMPULSE_MIN_DELTA &&
+        deltaAbs >=
+          Math.max(modelWheelLastDeltaAbs, 1) *
+            MODEL_WHEEL_NEW_IMPULSE_RATIO
+      );
     };
 
     const cancelLayerFade = () => {
@@ -660,6 +833,8 @@ export function TechnicalScrollController() {
 
       clearTransitionPlayback();
       videoLayers.forEach((targetVideo) => targetVideo.pause());
+      setVideoFrame(technicalSteps[technicalSteps.length - 1].time);
+      showVideoLayer(video);
       warmModelImages();
       updateModelInterface(modelIndex, 0);
       setSceneMode("models");
@@ -939,13 +1114,37 @@ export function TechnicalScrollController() {
       const rect = root.getBoundingClientRect();
 
       return (
+        rect.top >= -SCENE_ALIGNMENT_TOLERANCE_PX &&
         rect.top <= SCENE_ALIGNMENT_TOLERANCE_PX &&
-        Math.abs(rect.bottom - window.innerHeight) <=
-          SCENE_ALIGNMENT_TOLERANCE_PX
+        rect.bottom >= window.innerHeight - SCENE_ALIGNMENT_TOLERANCE_PX
       );
     };
 
-    const handleDirection = (direction: "down" | "up") => {
+    const canHandleDirection = (direction: ScrollDirection) => {
+      if (activeMode === "models") {
+        if (direction === "up") {
+          return true;
+        }
+
+        const activeModel = outdoorCameraModels[activeModelIndex];
+
+        return (
+          activeModelStepIndex < activeModel.steps.length - 1 ||
+          activeModelIndex < outdoorCameraModels.length - 1
+        );
+      }
+
+      if (direction === "down") {
+        return true;
+      }
+
+      return activeStepIndex > 0;
+    };
+
+    const shouldContainWheelDirection = (direction: ScrollDirection) =>
+      direction === "down" || canHandleDirection(direction);
+
+    const handleDirection = (direction: ScrollDirection) => {
       if (activeMode === "models") {
         const activeModel = outdoorCameraModels[activeModelIndex];
 
@@ -1000,20 +1199,114 @@ export function TechnicalScrollController() {
     };
 
     const handleWheel = (event: WheelEvent) => {
-      if (!isSceneActive() || Math.abs(event.deltaY) < SCROLL_THRESHOLD) {
+      if (!isSceneActive()) {
+        clearModelWheelControl();
         return;
       }
 
-      const direction = event.deltaY > 0 ? "down" : "up";
+      if (activeMode === "steps") {
+        clearModelWheelControl();
+
+        const legacyDirection: ScrollDirection =
+          event.deltaY > 0 ? "down" : "up";
+
+        if (Math.abs(event.deltaY) < SCROLL_THRESHOLD) {
+          if (shouldContainWheelDirection(legacyDirection)) {
+            event.preventDefault();
+          }
+
+          return;
+        }
+
+        if (isTransitioning) {
+          event.preventDefault();
+          return;
+        }
+
+        if (handleDirection(legacyDirection)) {
+          event.preventDefault();
+          return;
+        }
+
+        if (shouldContainWheelDirection(legacyDirection)) {
+          event.preventDefault();
+        }
+
+        return;
+      }
+
+      const deltaY = normalizeWheelDeltaY(event);
+      const deltaAbs = Math.abs(deltaY);
+
+      if (deltaAbs === 0) {
+        return;
+      }
+
+      const now = performance.now();
+      const eventGapMs =
+        modelWheelLastEventTime === 0
+          ? Number.POSITIVE_INFINITY
+          : now - modelWheelLastEventTime;
+      const direction = getWheelDirection(deltaY);
+
+      if (isModelWheelTransitionLocked) {
+        event.preventDefault();
+        modelWheelLastEventTime = now;
+        modelWheelLastDeltaAbs = deltaAbs;
+        return;
+      }
+
+      if (isModelWheelTailDraining) {
+        event.preventDefault();
+
+        if (!isNewModelWheelImpulse(direction, deltaAbs, eventGapMs)) {
+          modelWheelLastEventTime = now;
+          modelWheelLastDeltaAbs = deltaAbs;
+          scheduleModelWheelTailRelease();
+          return;
+        }
+
+        clearModelWheelControl();
+      }
+
+      if (deltaAbs < MODEL_WHEEL_TRIGGER_DELTA) {
+        if (shouldContainWheelDirection(direction)) {
+          event.preventDefault();
+        }
+
+        return;
+      }
+
+      modelWheelLastEventTime = now;
+      const accumulatedDirection = getAccumulatedModelWheelDirection(deltaY);
+
+      if (accumulatedDirection === null) {
+        event.preventDefault();
+        return;
+      }
 
       if (isTransitioning) {
         event.preventDefault();
         return;
       }
 
-      if (handleDirection(direction)) {
-        event.preventDefault();
+      if (!canHandleDirection(accumulatedDirection)) {
+        if (shouldContainWheelDirection(accumulatedDirection)) {
+          event.preventDefault();
+        }
+
+        clearModelWheelControl();
+        return;
       }
+
+      event.preventDefault();
+
+      if (handleDirection(accumulatedDirection)) {
+        startModelWheelTransition(accumulatedDirection, deltaAbs);
+        return;
+      }
+
+      clearModelWheelControl();
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1147,6 +1440,7 @@ export function TechnicalScrollController() {
       isDisposed = true;
       clearTransitionPlayback();
       cancelPosterFade();
+      clearModelWheelControl();
       observer?.disconnect();
       video.removeEventListener("loadedmetadata", initializeFrame);
       videoLayers.forEach((targetVideo) => {

@@ -65,23 +65,21 @@ export function TechnicalScrollScene({
           <source src={reverseMp4Src} type="video/mp4" />
         </video>
         <div className={styles.cameraModelMediaStack} data-camera-model-media>
-          {outdoorCameraModels.map((model, index) =>
-            model.imageSrc ? (
-              <Image
-                className={styles.cameraModelMedia}
-                src={model.imageSrc}
-                alt=""
-                fill
-                loading="eager"
-                sizes="100vw"
-                unoptimized
-                data-active="false"
-                data-camera-model-image
-                data-camera-model-image-index={index}
-                key={model.code}
-              />
-            ) : null,
-          )}
+          {outdoorCameraModels.map((model, index) => (
+            <Image
+              className={styles.cameraModelMedia}
+              src={model.imageSrc}
+              alt=""
+              fill
+              loading="eager"
+              sizes="100vw"
+              unoptimized
+              data-active="false"
+              data-camera-model-image
+              data-camera-model-image-index={index}
+              key={model.code}
+            />
+          ))}
         </div>
         <div className={styles.technicalScrim} />
       </div>

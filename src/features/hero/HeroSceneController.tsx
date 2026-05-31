@@ -13,6 +13,7 @@ const REVERSE_TO_START_FALLBACK_SECONDS = 4.05;
 const REVERSE_TO_CAPABILITY_FALLBACK_SECONDS = 6.55;
 const REVERSE_TO_OPERATIONS_FALLBACK_SECONDS = 3.55;
 const SCROLL_DIRECTION_THRESHOLD = 4;
+const WHEEL_ACCUMULATION_RESET_MS = 180;
 const START_FRAME_EPSILON_SECONDS = 0.05;
 const VIDEO_LAYER_CROSSFADE_SECONDS = 0.22;
 const DEFERRED_VIDEO_READY_TIMEOUT_MS = 2600;
@@ -22,7 +23,7 @@ const VIDEO_TRANSITION_MIN_TIMEOUT_MS = 7600;
 const VIDEO_TRANSITION_PROGRESS_EPSILON_SECONDS = 0.025;
 const INITIAL_FORWARD_WARMUP_DELAY_MS = 4800;
 const INITIAL_FORWARD_WARMUP_IDLE_TIMEOUT_MS = 2400;
-const HERO_INPUT_ALIGNMENT_TOLERANCE_PX = 2;
+const HERO_INPUT_ALIGNMENT_TOLERANCE_PX = 24;
 const HERO_VIDEO_FALLBACK_ASPECT_RATIO = 16 / 9;
 
 type HeroVideoStep =
@@ -170,6 +171,8 @@ export function HeroSceneController() {
     let reverseTarget: ReverseTarget | null = null;
     let lastScrollY = window.scrollY;
     let lastTouchY: number | null = null;
+    let accumulatedWheelDeltaY = 0;
+    let wheelAccumulationTimeoutId: number | null = null;
     let forwardStopFrameId: number | null = null;
     let reverseStopFrameId: number | null = null;
     let isPageScrollLocked = false;
@@ -219,6 +222,48 @@ export function HeroSceneController() {
 
       window.cancelAnimationFrame(forwardStopFrameId);
       forwardStopFrameId = null;
+    };
+
+    const clearWheelAccumulator = () => {
+      accumulatedWheelDeltaY = 0;
+
+      if (wheelAccumulationTimeoutId !== null) {
+        window.clearTimeout(wheelAccumulationTimeoutId);
+        wheelAccumulationTimeoutId = null;
+      }
+    };
+
+    const getAccumulatedWheelDirection = (deltaY: number) => {
+      if (deltaY === 0) {
+        return null;
+      }
+
+      if (
+        accumulatedWheelDeltaY !== 0 &&
+        Math.sign(accumulatedWheelDeltaY) !== Math.sign(deltaY)
+      ) {
+        accumulatedWheelDeltaY = 0;
+      }
+
+      accumulatedWheelDeltaY += deltaY;
+
+      if (wheelAccumulationTimeoutId !== null) {
+        window.clearTimeout(wheelAccumulationTimeoutId);
+      }
+
+      wheelAccumulationTimeoutId = window.setTimeout(
+        clearWheelAccumulator,
+        WHEEL_ACCUMULATION_RESET_MS,
+      );
+
+      if (Math.abs(accumulatedWheelDeltaY) < SCROLL_DIRECTION_THRESHOLD) {
+        return null;
+      }
+
+      const direction = accumulatedWheelDeltaY > 0 ? "down" : "up";
+      clearWheelAccumulator();
+
+      return direction;
     };
 
     const cancelReverseStopMonitor = () => {
@@ -2003,22 +2048,31 @@ export function HeroSceneController() {
         return;
       }
 
-      if (Math.abs(event.deltaY) < SCROLL_DIRECTION_THRESHOLD) {
+      if (event.deltaY === 0) {
+        clearWheelAccumulator();
         return;
       }
 
       if (!isHeroSceneActive()) {
+        clearWheelAccumulator();
         return;
       }
 
       const direction = event.deltaY > 0 ? "down" : "up";
 
       if (!canStartDirection(direction)) {
+        clearWheelAccumulator();
         return;
       }
 
       event.preventDefault();
-      handleDirection(direction);
+      const accumulatedDirection = getAccumulatedWheelDirection(event.deltaY);
+
+      if (accumulatedDirection === null) {
+        return;
+      }
+
+      handleDirection(accumulatedDirection);
     }
 
     function handleTouchStart(event: TouchEvent) {
@@ -2123,6 +2177,7 @@ export function HeroSceneController() {
       cancelForwardStopMonitor();
       cancelReverseStopMonitor();
       cancelAnchoredTraceLayout();
+      clearWheelAccumulator();
       killAllDetailOverlayTweens();
       unlockPageScroll();
       removeScrollListeners();

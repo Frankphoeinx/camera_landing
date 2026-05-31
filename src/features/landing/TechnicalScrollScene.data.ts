@@ -9,7 +9,7 @@ export type TechnicalStep = {
 export type OutdoorCameraModel = {
   code: string;
   fit: string;
-  imageSrc?: string;
+  imageSrc: string;
   name: string;
   steps: {
     body: string;
@@ -66,6 +66,7 @@ export const outdoorCameraModels: OutdoorCameraModel[] = [
   {
     code: "SS-PTZ",
     fit: "Villa perimeter / wall mount",
+    imageSrc: "/media/images/outdoor-model-ss-ptz-last-frame.png",
     name: "Solar Sentinel PTZ",
     steps: [
       {
