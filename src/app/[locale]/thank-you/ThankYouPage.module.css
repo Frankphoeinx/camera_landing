@@ -1,0 +1,206 @@
+.section {
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  overflow: hidden;
+  place-items: center;
+  padding: clamp(24px, 5vw, 72px);
+  color: #fff4df;
+  background:
+    linear-gradient(115deg, rgba(5, 5, 5, 0.96), rgba(15, 13, 10, 0.98)),
+    radial-gradient(circle at 72% 42%, rgba(242, 193, 107, 0.14), transparent 38%);
+  isolation: isolate;
+}
+
+.section::before {
+  position: absolute;
+  inset: -1px;
+  z-index: -2;
+  content: "";
+  background:
+    linear-gradient(rgba(242, 193, 107, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 193, 107, 0.06) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.86), transparent 78%);
+}
+
+.section::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.86), rgba(5, 5, 5, 0.36), rgba(5, 5, 5, 0.88)),
+    linear-gradient(180deg, rgba(242, 193, 107, 0.08), transparent 42%, rgba(0, 0, 0, 0.28));
+}
+
+.panel {
+  position: relative;
+  display: grid;
+  width: min(980px, 100%);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.58fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: end;
+  padding: clamp(26px, 4vw, 54px);
+  border: 1px solid rgba(242, 193, 107, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 234, 0.07), rgba(255, 247, 234, 0.018)),
+    rgba(5, 5, 5, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 238, 194, 0.12),
+    0 28px 90px rgba(0, 0, 0, 0.34);
+}
+
+.panel::before,
+.panel::after {
+  position: absolute;
+  left: 0;
+  width: 124px;
+  height: 24px;
+  content: "";
+  border-left: 1px solid rgba(242, 193, 107, 0.72);
+}
+
+.panel::before {
+  top: 0;
+  border-top: 1px solid rgba(242, 193, 107, 0.72);
+}
+
+.panel::after {
+  bottom: 0;
+  border-bottom: 1px solid rgba(242, 193, 107, 0.52);
+}
+
+.content {
+  display: grid;
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.eyebrow,
+.request,
+.steps span,
+.actions a {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  margin: 0;
+  color: rgba(242, 193, 107, 0.92);
+  font-size: 0.7rem;
+  font-weight: 720;
+  letter-spacing: 0.16em;
+}
+
+.content h1 {
+  max-width: 9ch;
+  margin: 0;
+  color: #fff7ea;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 0.88;
+}
+
+.content > p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(255, 247, 234, 0.74);
+  font-size: clamp(1rem, 1.35vw, 1.24rem);
+  line-height: 1.62;
+}
+
+.request {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(78, 145, 168, 0.28);
+  color: rgba(195, 231, 239, 0.94);
+  font-size: 0.72rem;
+  font-weight: 720;
+  letter-spacing: 0.1em;
+}
+
+.request strong {
+  color: #fff7ea;
+}
+
+.steps {
+  display: grid;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  color: rgba(255, 247, 234, 0.74);
+  line-height: 1.45;
+}
+
+.steps span {
+  color: rgba(242, 193, 107, 0.84);
+  font-size: 0.68rem;
+  font-weight: 720;
+  letter-spacing: 0.14em;
+}
+
+.sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.sidebar h2 {
+  margin: 0;
+  color: rgba(255, 247, 234, 0.9);
+  font-size: clamp(1.3rem, 2vw, 1.9rem);
+  line-height: 1.08;
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+}
+
+.actions a {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid rgba(242, 193, 107, 0.26);
+  color: #fff4df;
+  font-size: 0.76rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.actions a:first-child {
+  border-color: rgba(255, 236, 184, 0.62);
+  color: #120d07;
+  background: linear-gradient(180deg, rgba(246, 202, 116, 0.98), rgba(205, 136, 45, 0.94));
+}
+
+.actions a:focus-visible {
+  outline: 2px solid rgba(242, 193, 107, 0.88);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .panel {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .content h1 {
+    max-width: 10ch;
+  }
+}

@@ -31,9 +31,13 @@ function FinalStatusSection({
 
 type HeroFinalInterfaceProps = {
   content: Dictionary["hero"]["final"];
+  onOrderOpen?: () => void;
 };
 
-export function HeroFinalInterface({ content }: HeroFinalInterfaceProps) {
+export function HeroFinalInterface({
+  content,
+  onOrderOpen,
+}: HeroFinalInterfaceProps) {
   return (
     <aside
       className={`${styles.capabilityOverlay} ${styles.finalOverlay}`}
@@ -83,10 +87,14 @@ export function HeroFinalInterface({ content }: HeroFinalInterfaceProps) {
         </ul>
 
         <div className={styles.finalActionRow} data-final-panel>
-          <a className={`${styles.action} ${styles.primaryAction}`} href="#installation">
+          <button
+            className={`${styles.action} ${styles.primaryAction}`}
+            onClick={onOrderOpen}
+            type="button"
+          >
             <span>{content.primaryAction}</span>
             <span className={styles.actionSheen} aria-hidden="true" />
-          </a>
+          </button>
           <a className={`${styles.action} ${styles.secondaryAction}`} href="#system">
             {content.secondaryAction}
           </a>

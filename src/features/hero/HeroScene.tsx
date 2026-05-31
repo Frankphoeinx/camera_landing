@@ -8,6 +8,7 @@ import styles from "./HeroScene.module.css";
 
 type HeroSceneProps = {
   content: Dictionary["hero"];
+  onOrderOpen?: () => void;
   src: string;
   srcWebm?: string;
   reverseSrc: string;
@@ -21,6 +22,7 @@ type HeroSceneProps = {
 
 export function HeroScene({
   content,
+  onOrderOpen,
   src,
   srcWebm,
   reverseSrc,
@@ -107,10 +109,10 @@ export function HeroScene({
       </div>
 
       <div className={styles.contentShell}>
-        <HeroIntroInterface content={content.intro} />
+        <HeroIntroInterface content={content.intro} onOrderOpen={onOrderOpen} />
         <HeroCapabilityInterface content={content.capability} />
         <HeroOperationsInterface content={content.operations} />
-        <HeroFinalInterface content={content.final} />
+        <HeroFinalInterface content={content.final} onOrderOpen={onOrderOpen} />
       </div>
 
       <div

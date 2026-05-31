@@ -1,0 +1,339 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  align-items: center;
+  justify-items: end;
+  padding: clamp(14px, 2.4vw, 34px);
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.48), rgba(5, 5, 5, 0.76)),
+    radial-gradient(circle at 72% 28%, rgba(242, 193, 107, 0.12), transparent 34%);
+  backdrop-filter: blur(14px) saturate(1.04);
+  overscroll-behavior: contain;
+}
+
+.backdropButton {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.panel {
+  position: relative;
+  display: grid;
+  width: min(620px, 100%);
+  max-height: min(880px, calc(100dvh - clamp(28px, 4.8vw, 68px)));
+  overflow: hidden;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(242, 193, 107, 0.28);
+  border-radius: 8px;
+  color: #fff4df;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 234, 0.08), rgba(255, 247, 234, 0.02)),
+    linear-gradient(180deg, rgba(10, 8, 6, 0.92), rgba(5, 5, 5, 0.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 238, 194, 0.12),
+    0 34px 110px rgba(0, 0, 0, 0.46);
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panelScroller {
+  position: relative;
+  z-index: 1;
+  max-height: min(880px, calc(100dvh - clamp(28px, 4.8vw, 68px)));
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  padding: clamp(24px, 3vw, 38px);
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cornerTop,
+.cornerBottom {
+  position: absolute;
+  left: 0;
+  width: 108px;
+  height: 22px;
+  border-left: 1px solid rgba(242, 193, 107, 0.74);
+}
+
+.cornerTop {
+  top: 0;
+  border-top: 1px solid rgba(242, 193, 107, 0.74);
+}
+
+.cornerBottom {
+  bottom: 0;
+  border-bottom: 1px solid rgba(242, 193, 107, 0.52);
+}
+
+.scanLine {
+  position: absolute;
+  top: 0;
+  left: 24px;
+  width: 52%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(242, 193, 107, 0.82), transparent);
+}
+
+.closeButton {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(255, 244, 222, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 247, 234, 0.04);
+  cursor: pointer;
+}
+
+.closeButton span {
+  position: absolute;
+  width: 15px;
+  height: 1px;
+  background: rgba(255, 247, 234, 0.74);
+}
+
+.closeButton span:first-child {
+  transform: rotate(45deg);
+}
+
+.closeButton span:last-child {
+  transform: rotate(-45deg);
+}
+
+.closeButton:focus-visible,
+.submitButton:focus-visible,
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid rgba(242, 193, 107, 0.88);
+  outline-offset: 3px;
+}
+
+.header {
+  display: grid;
+  max-width: 520px;
+  gap: 12px;
+  padding-right: 42px;
+}
+
+.eyebrow,
+.sectionHeader,
+.field span,
+.footer p,
+.error {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  margin: 0;
+  color: rgba(242, 193, 107, 0.92);
+  font-size: 0.68rem;
+  font-weight: 720;
+  letter-spacing: 0.16em;
+}
+
+.header h2 {
+  max-width: 11ch;
+  margin: 0;
+  color: #fff7ea;
+  font-size: clamp(2.25rem, 5vw, 4.35rem);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 0.94;
+}
+
+.header p {
+  margin: 0;
+  color: rgba(255, 247, 234, 0.72);
+  font-size: clamp(0.96rem, 1.2vw, 1.12rem);
+  line-height: 1.58;
+}
+
+.form {
+  display: grid;
+  gap: 16px;
+  margin-top: clamp(22px, 3vw, 34px);
+}
+
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  color: rgba(255, 247, 234, 0.68);
+  font-size: 0.68rem;
+  font-weight: 720;
+  letter-spacing: 0.14em;
+}
+
+.sectionHeader span {
+  color: rgba(242, 193, 107, 0.9);
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.field span {
+  color: rgba(242, 193, 107, 0.72);
+  font-size: 0.62rem;
+  font-weight: 720;
+  letter-spacing: 0.12em;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(255, 244, 222, 0.14);
+  border-radius: 6px;
+  color: #fff7ea;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 234, 0.06), rgba(255, 247, 234, 0.025)),
+    rgba(5, 5, 5, 0.36);
+  font: inherit;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.field input,
+.field select {
+  height: 48px;
+  padding: 0 13px;
+}
+
+.field textarea {
+  min-height: 110px;
+  padding: 13px;
+  resize: vertical;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: rgba(255, 247, 234, 0.38);
+}
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: rgba(242, 193, 107, 0.34);
+}
+
+.field select {
+  cursor: pointer;
+}
+
+.footer {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.footer p {
+  margin: 0;
+  color: rgba(255, 247, 234, 0.46);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1.45;
+}
+
+.error {
+  color: #ffb7a3;
+  font-size: 0.68rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+}
+
+.submitButton {
+  position: relative;
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  justify-self: start;
+  padding: 0 24px;
+  border: 1px solid rgba(255, 236, 184, 0.62);
+  border-radius: 6px;
+  color: #120d07;
+  background: linear-gradient(180deg, rgba(246, 202, 116, 0.98), rgba(205, 136, 45, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 220, 0.55),
+    0 14px 32px rgba(190, 120, 32, 0.18);
+  cursor: pointer;
+  font-weight: 780;
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+@media (max-width: 700px) {
+  .backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .panel {
+    max-height: calc(100dvh - 20px);
+  }
+
+  .panelScroller {
+    max-height: calc(100dvh - 20px);
+    padding: 24px 18px;
+  }
+
+  .header {
+    padding-right: 38px;
+  }
+
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .submitButton {
+    width: 100%;
+  }
+}

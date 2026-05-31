@@ -577,6 +577,85 @@ const en = {
       },
     ],
   },
+  order: {
+    closeLabel: "Close order form",
+    contactMethods: [
+      { label: "Phone call", value: "phone" },
+      { label: "Email", value: "email" },
+      { label: "WhatsApp", value: "whatsapp" },
+      { label: "Telegram", value: "telegram" },
+    ],
+    contactSection: "Contact",
+    copy: "Share the site details and we will prepare the right solar camera installation plan.",
+    errors: {
+      submit: "Could not send the request. Please try again.",
+    },
+    eyebrow: "Installation request",
+    fields: {
+      city: {
+        label: "City / area",
+        placeholder: "Tashkent, villa district",
+      },
+      comments: {
+        label: "Comment",
+        placeholder: "Gate, perimeter wall, garden edge, timeline...",
+      },
+      contactMethod: {
+        label: "Preferred contact",
+      },
+      email: {
+        label: "Email",
+        placeholder: "you@example.com",
+      },
+      name: {
+        label: "Name",
+        placeholder: "Your full name",
+      },
+      phone: {
+        label: "Phone",
+        placeholder: "+998 90 123 45 67",
+      },
+      propertyType: {
+        label: "Property type",
+      },
+      siteArea: {
+        label: "Install zone",
+        placeholder: "Driveway, gate, perimeter, terrace...",
+      },
+    },
+    privacyNote: "We use these details only to contact you about the installation request.",
+    propertyTypes: [
+      { label: "Private estate", value: "private-estate" },
+      { label: "Villa / house", value: "villa-house" },
+      { label: "Commercial site", value: "commercial-site" },
+      { label: "Remote perimeter", value: "remote-perimeter" },
+    ],
+    requestSection: "Request",
+    siteSection: "Site",
+    submit: "Send request",
+    submitting: "Sending...",
+    title: "Book a solar security setup",
+  },
+  thankYou: {
+    ariaLabel: "Installation request confirmation",
+    copy: "We received your installation request. The team will review the site details and contact you with the next step.",
+    eyebrow: "Request received",
+    metadata: {
+      title: "Request received | Camera Landing",
+      description: "Thank you page for a solar security camera installation request.",
+    },
+    nextSteps: [
+      "We review the perimeter and install zone.",
+      "We contact you through the preferred channel.",
+      "We prepare the camera and solar setup recommendation.",
+    ],
+    nextTitle: "What happens next",
+    primaryAction: "Back to main page",
+    requestFallback: "Queued",
+    requestLabel: "Request ID",
+    secondaryAction: "Explore system",
+    title: "Your request is in the queue",
+  },
 };
 
 export type Dictionary = typeof en;
@@ -1158,6 +1237,85 @@ const ru: Dictionary = {
       },
     ],
   },
+  order: {
+    closeLabel: "Закрыть форму заказа",
+    contactMethods: [
+      { label: "Звонок", value: "phone" },
+      { label: "Email", value: "email" },
+      { label: "WhatsApp", value: "whatsapp" },
+      { label: "Telegram", value: "telegram" },
+    ],
+    contactSection: "Контакт",
+    copy: "Расскажите про объект, и мы подготовим подходящий план установки солнечной камеры.",
+    errors: {
+      submit: "Не удалось отправить заявку. Попробуйте еще раз.",
+    },
+    eyebrow: "Заявка на установку",
+    fields: {
+      city: {
+        label: "Город / район",
+        placeholder: "Ташкент, район вилл",
+      },
+      comments: {
+        label: "Комментарий",
+        placeholder: "Ворота, стена периметра, сад, сроки...",
+      },
+      contactMethod: {
+        label: "Как связаться",
+      },
+      email: {
+        label: "Email",
+        placeholder: "pochta@example.com",
+      },
+      name: {
+        label: "Имя",
+        placeholder: "Ваше имя и фамилия",
+      },
+      phone: {
+        label: "Телефон",
+        placeholder: "+998 90 123 45 67",
+      },
+      propertyType: {
+        label: "Тип объекта",
+      },
+      siteArea: {
+        label: "Зона установки",
+        placeholder: "Подъезд, ворота, периметр, терраса...",
+      },
+    },
+    privacyNote: "Мы используем эти данные только для связи по заявке на установку.",
+    propertyTypes: [
+      { label: "Частная резиденция", value: "private-estate" },
+      { label: "Вилла / дом", value: "villa-house" },
+      { label: "Коммерческий объект", value: "commercial-site" },
+      { label: "Удаленный периметр", value: "remote-perimeter" },
+    ],
+    requestSection: "Запрос",
+    siteSection: "Объект",
+    submit: "Отправить заявку",
+    submitting: "Отправляем...",
+    title: "Заказать солнечную систему охраны",
+  },
+  thankYou: {
+    ariaLabel: "Подтверждение заявки на установку",
+    copy: "Мы получили вашу заявку. Команда изучит детали объекта и свяжется с вами по следующему шагу.",
+    eyebrow: "Заявка получена",
+    metadata: {
+      title: "Заявка получена | Camera Landing",
+      description: "Страница благодарности после заявки на установку солнечной камеры безопасности.",
+    },
+    nextSteps: [
+      "Мы изучим периметр и зону установки.",
+      "Свяжемся с вами удобным способом.",
+      "Подготовим рекомендацию по камерам и солнечной системе.",
+    ],
+    nextTitle: "Что будет дальше",
+    primaryAction: "Вернуться на главную",
+    requestFallback: "В очереди",
+    requestLabel: "Номер заявки",
+    secondaryAction: "Изучить систему",
+    title: "Ваша заявка в очереди",
+  },
 };
 
 const uz: Dictionary = {
@@ -1736,6 +1894,85 @@ const uz: Dictionary = {
         ],
       },
     ],
+  },
+  order: {
+    closeLabel: "Buyurtma formasini yopish",
+    contactMethods: [
+      { label: "Telefon qo'ng'irog'i", value: "phone" },
+      { label: "Email", value: "email" },
+      { label: "WhatsApp", value: "whatsapp" },
+      { label: "Telegram", value: "telegram" },
+    ],
+    contactSection: "Aloqa",
+    copy: "Obyekt tafsilotlarini yuboring, biz mos quyoshli kamera o'rnatish rejasini tayyorlaymiz.",
+    errors: {
+      submit: "So'rovni yuborib bo'lmadi. Qayta urinib ko'ring.",
+    },
+    eyebrow: "O'rnatish so'rovi",
+    fields: {
+      city: {
+        label: "Shahar / hudud",
+        placeholder: "Toshkent, villa hududi",
+      },
+      comments: {
+        label: "Izoh",
+        placeholder: "Darvoza, perimetr devori, bog', muddat...",
+      },
+      contactMethod: {
+        label: "Aloqa usuli",
+      },
+      email: {
+        label: "Email",
+        placeholder: "ism@example.com",
+      },
+      name: {
+        label: "Ism",
+        placeholder: "Ism va familiyangiz",
+      },
+      phone: {
+        label: "Telefon",
+        placeholder: "+998 90 123 45 67",
+      },
+      propertyType: {
+        label: "Obyekt turi",
+      },
+      siteArea: {
+        label: "O'rnatish zonasi",
+        placeholder: "Kirish yo'li, darvoza, perimetr, terrasa...",
+      },
+    },
+    privacyNote: "Bu ma'lumotlardan faqat o'rnatish so'rovi bo'yicha bog'lanish uchun foydalanamiz.",
+    propertyTypes: [
+      { label: "Xususiy rezidensiya", value: "private-estate" },
+      { label: "Villa / uy", value: "villa-house" },
+      { label: "Tijorat obyekti", value: "commercial-site" },
+      { label: "Masofaviy perimetr", value: "remote-perimeter" },
+    ],
+    requestSection: "So'rov",
+    siteSection: "Obyekt",
+    submit: "So'rov yuborish",
+    submitting: "Yuborilmoqda...",
+    title: "Quyoshli xavfsizlik tizimini buyurtma qilish",
+  },
+  thankYou: {
+    ariaLabel: "O'rnatish so'rovi tasdig'i",
+    copy: "So'rovingiz qabul qilindi. Jamoa obyekt tafsilotlarini ko'rib chiqadi va keyingi qadam uchun siz bilan bog'lanadi.",
+    eyebrow: "So'rov qabul qilindi",
+    metadata: {
+      title: "So'rov qabul qilindi | Camera Landing",
+      description: "Quyoshli xavfsizlik kamerasi o'rnatish so'rovidan keyingi rahmat sahifasi.",
+    },
+    nextSteps: [
+      "Perimetr va o'rnatish zonasini ko'rib chiqamiz.",
+      "Siz tanlagan aloqa usuli orqali bog'lanamiz.",
+      "Kamera va quyosh tizimi bo'yicha tavsiya tayyorlaymiz.",
+    ],
+    nextTitle: "Keyin nima bo'ladi",
+    primaryAction: "Bosh sahifaga qaytish",
+    requestFallback: "Navbatda",
+    requestLabel: "So'rov raqami",
+    secondaryAction: "Tizimni ko'rish",
+    title: "So'rovingiz navbatga qo'yildi",
   },
 };
 

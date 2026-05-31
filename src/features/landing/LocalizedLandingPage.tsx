@@ -13,6 +13,7 @@ import { HeroLanguageSwitcher, HeroScene } from "@/features/hero";
 import { hasLocale, type Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { InstallationSection } from "./InstallationSection";
+import { OrderPanel } from "./OrderPanel";
 import { TechnicalScrollScene } from "./TechnicalScrollScene";
 
 type LocalizedLandingPageProps = {
@@ -271,6 +272,7 @@ export function LocalizedLandingPage({
   initialLocale,
 }: LocalizedLandingPageProps) {
   const [locale, setLocale] = useState(initialLocale);
+  const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(false);
   const controllerSnapshotRef = useRef<ControllerSnapshot | null>(null);
   const dictionary = dictionaries[locale];
 
@@ -335,9 +337,19 @@ export function LocalizedLandingPage({
         currentLocale={locale}
         onLocaleChange={switchLocale}
       />
-      <HeroScene content={dictionary.hero} {...heroMedia} />
+      <HeroScene
+        content={dictionary.hero}
+        onOrderOpen={() => setIsOrderPanelOpen(true)}
+        {...heroMedia}
+      />
       <InstallationSection content={dictionary.installation} />
       <TechnicalScrollScene content={dictionary.technical} {...technicalMedia} />
+      <OrderPanel
+        content={dictionary.order}
+        isOpen={isOrderPanelOpen}
+        locale={locale}
+        onClose={() => setIsOrderPanelOpen(false)}
+      />
     </main>
   );
 }

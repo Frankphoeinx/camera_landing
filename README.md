@@ -23,3 +23,20 @@ npm run dev
 npm run build
 npm run lint
 ```
+
+## Order Email
+
+The order form sends requests through the Resend REST API.
+
+Required production environment variables:
+
+```bash
+RESEND_API_KEY=
+ORDER_EMAIL_FROM=
+```
+
+Optional:
+
+```bash
+ORDER_EMAIL_TO=frenkmillon@gmail.com
+```

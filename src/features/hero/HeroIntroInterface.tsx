@@ -4,9 +4,13 @@ import styles from "./HeroScene.module.css";
 
 type HeroIntroInterfaceProps = {
   content: Dictionary["hero"]["intro"];
+  onOrderOpen?: () => void;
 };
 
-export function HeroIntroInterface({ content }: HeroIntroInterfaceProps) {
+export function HeroIntroInterface({
+  content,
+  onOrderOpen,
+}: HeroIntroInterfaceProps) {
   return (
     <div className={styles.interface} data-hud-root>
       <div className={styles.interfaceFrame} aria-hidden="true">
@@ -37,10 +41,14 @@ export function HeroIntroInterface({ content }: HeroIntroInterfaceProps) {
       </p>
 
       <nav className={styles.actions} aria-label={content.actionsLabel} data-hud-item>
-        <a className={`${styles.action} ${styles.primaryAction}`} href="#installation">
+        <button
+          className={`${styles.action} ${styles.primaryAction}`}
+          onClick={onOrderOpen}
+          type="button"
+        >
           <span>{content.primaryAction}</span>
           <span className={styles.actionSheen} data-cta-sheen aria-hidden="true" />
-        </a>
+        </button>
         <a className={`${styles.action} ${styles.secondaryAction}`} href="#system">
           {content.secondaryAction}
         </a>

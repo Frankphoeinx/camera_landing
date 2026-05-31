@@ -450,6 +450,7 @@
 }
 
 .action {
+  appearance: none;
   position: relative;
   display: inline-flex;
   min-height: 48px;
@@ -459,6 +460,7 @@
   padding: 0 22px;
   border: 1px solid rgba(242, 193, 107, 0.26);
   color: #fff4df;
+  cursor: pointer;
   font-size: 0.95rem;
   font-weight: 760;
   line-height: 1;
