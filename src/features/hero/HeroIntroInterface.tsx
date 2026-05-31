@@ -25,8 +25,8 @@ export function HeroIntroInterface({ content }: HeroIntroInterfaceProps) {
       </div>
 
       <h1 className={styles.headline} data-headline>
-        {content.headlineLines.map((line) => (
-          <span className={styles.headlineMask} key={line}>
+        {content.headlineLines.map((line, index) => (
+          <span className={styles.headlineMask} key={index}>
             <span data-headline-line>{line}</span>
           </span>
         ))}

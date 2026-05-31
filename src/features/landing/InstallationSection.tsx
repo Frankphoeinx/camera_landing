@@ -35,8 +35,8 @@ export function InstallationSection({ content }: InstallationSectionProps) {
             <strong>{content.checklistStatus}</strong>
           </div>
           <div className={styles.installationSignalGrid}>
-            {content.signals.map((signal) => (
-              <div className={styles.installationSignal} key={signal.label}>
+            {content.signals.map((signal, index) => (
+              <div className={styles.installationSignal} key={index}>
                 <span>{signal.label}</span>
                 <strong>{signal.value}</strong>
               </div>
@@ -44,7 +44,7 @@ export function InstallationSection({ content }: InstallationSectionProps) {
           </div>
           <ol className={styles.installationChecklistList}>
             {content.checklist.map((item, index) => (
-              <li className={styles.installationChecklistItem} key={item.label}>
+              <li className={styles.installationChecklistItem} key={index}>
                 <span className={styles.installationChecklistIndex}>
                   {String(index + 1).padStart(2, "0")}
                 </span>
@@ -59,8 +59,8 @@ export function InstallationSection({ content }: InstallationSectionProps) {
         </aside>
 
         <div className={styles.installationMetrics}>
-          {content.metrics.map((metric) => (
-            <div className={styles.installationMetric} key={metric.label}>
+          {content.metrics.map((metric, index) => (
+            <div className={styles.installationMetric} key={index}>
               <span>{metric.label}</span>
               <strong>{metric.value}</strong>
             </div>
@@ -68,8 +68,8 @@ export function InstallationSection({ content }: InstallationSectionProps) {
         </div>
 
         <div className={styles.installationPhases}>
-          {content.phases.map((phase) => (
-            <article className={styles.installationPhase} key={phase.eyebrow}>
+          {content.phases.map((phase, index) => (
+            <article className={styles.installationPhase} key={index}>
               <span>{phase.eyebrow}</span>
               <strong>{phase.title}</strong>
               <p>{phase.body}</p>

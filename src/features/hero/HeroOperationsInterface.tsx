@@ -60,8 +60,8 @@ export function HeroOperationsInterface({ content }: HeroOperationsInterfaceProp
             <span className={styles.capabilityCopy}>{panel.copy}</span>
 
             <div className={styles.operationsStats} aria-hidden="true">
-              {panel.stats.map((stat) => (
-                <span className={styles.operationsStat} key={stat.label}>
+              {panel.stats.map((stat, statIndex) => (
+                <span className={styles.operationsStat} key={statIndex}>
                   <span>{stat.label}</span>
                   <strong>{stat.value}</strong>
                 </span>
@@ -79,8 +79,8 @@ export function HeroOperationsInterface({ content }: HeroOperationsInterfaceProp
             </div>
 
             <div className={styles.operationsTags} aria-hidden="true">
-              {panel.tags.map((tag) => (
-                <span key={tag}>{tag}</span>
+              {panel.tags.map((tag, tagIndex) => (
+                <span key={tagIndex}>{tag}</span>
               ))}
             </div>
 

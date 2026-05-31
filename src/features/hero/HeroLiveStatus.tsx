@@ -197,7 +197,7 @@ export function HeroLiveStatus({ content }: HeroLiveStatusProps) {
           {liveStatuses.map((status, index) => (
             <div
               className={styles.statusRow}
-              key={status.label}
+              key={index}
               data-status-row
             >
               <span

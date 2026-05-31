@@ -36,7 +36,17 @@ export async function generateMetadata({
   const resolvedLocale = hasLocale(locale) ? locale : defaultLocale;
   const dictionary = getDictionary(resolvedLocale);
 
-  return dictionary.metadata;
+  return {
+    ...dictionary.metadata,
+    alternates: {
+      canonical: `/${resolvedLocale}`,
+      languages: {
+        en: "/en",
+        ru: "/ru",
+        uz: "/uz",
+      },
+    },
+  };
 }
 
 export const viewport: Viewport = {

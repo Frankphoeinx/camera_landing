@@ -134,7 +134,7 @@ export function TechnicalScrollScene({
                   data-active={index === 0}
                   data-complete="false"
                   data-technical-indicator
-                  key={step.eyebrow}
+                  key={index}
                 >
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <strong>{step.eyebrow}</strong>
@@ -187,16 +187,16 @@ export function TechnicalScrollScene({
                       data-active={stepIndex === 0}
                       data-complete="false"
                       data-camera-model-step-indicator
-                      key={`${model.code}-${step.eyebrow}`}
+                      key={`${model.code}-${stepIndex}`}
                     >
                       <span>{String(stepIndex + 1).padStart(2, "0")}</span>
                       <strong>{step.eyebrow}</strong>
                       <small>{step.metric}</small>
                       <p>{step.body}</p>
                       <dl className={styles.cameraModelStepFacts}>
-                        {step.facts.map((fact) => (
+                        {step.facts.map((fact, factIndex) => (
                           <div
-                            key={`${model.code}-${step.eyebrow}-${fact.label}`}
+                            key={`${model.code}-${stepIndex}-${factIndex}`}
                           >
                             <dt>{fact.label}</dt>
                             <dd>{fact.value}</dd>

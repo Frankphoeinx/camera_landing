@@ -19,8 +19,8 @@ function FinalStatusSection({
       <span className={styles.finalSectionValue}>{value}</span>
       <span className={styles.finalSectionCopy}>{detail}</span>
       <span className={styles.finalSectionFacts} aria-hidden="true">
-        {facts.map((fact) => (
-          <span className={styles.finalSectionFact} key={fact}>
+        {facts.map((fact, index) => (
+          <span className={styles.finalSectionFact} key={index}>
             {fact}
           </span>
         ))}
@@ -68,14 +68,14 @@ export function HeroFinalInterface({ content }: HeroFinalInterfaceProps) {
         </div>
 
         <div className={styles.finalCommandGrid}>
-          {content.sections.map((section) => (
-            <FinalStatusSection key={section.eyebrow} {...section} />
+          {content.sections.map((section, index) => (
+            <FinalStatusSection key={index} {...section} />
           ))}
         </div>
 
         <ul className={styles.finalStatusStrip} data-final-panel>
-          {content.statusItems.map((item) => (
-            <li className={styles.finalStatusChip} key={item}>
+          {content.statusItems.map((item, index) => (
+            <li className={styles.finalStatusChip} key={index}>
               <span className={styles.telemetryDot} aria-hidden="true" />
               {item}
             </li>
