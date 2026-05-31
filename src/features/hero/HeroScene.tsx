@@ -3,9 +3,11 @@ import { HeroFinalInterface } from "./HeroFinalInterface";
 import { HeroIntroInterface } from "./HeroIntroInterface";
 import { HeroOperationsInterface } from "./HeroOperationsInterface";
 import { HeroSceneController } from "./HeroSceneController";
+import type { Dictionary } from "@/i18n/dictionaries";
 import styles from "./HeroScene.module.css";
 
 type HeroSceneProps = {
+  content: Dictionary["hero"];
   src: string;
   srcWebm?: string;
   reverseSrc: string;
@@ -15,10 +17,10 @@ type HeroSceneProps = {
   reverseToOperationsSrc: string;
   reverseToOperationsSrcWebm?: string;
   poster?: string;
-  label?: string;
 };
 
 export function HeroScene({
+  content,
   src,
   srcWebm,
   reverseSrc,
@@ -28,14 +30,17 @@ export function HeroScene({
   reverseToOperationsSrc,
   reverseToOperationsSrcWebm,
   poster,
-  label = "Solar outdoor security camera hero",
 }: HeroSceneProps) {
   return (
     <section
       className={styles.section}
-      aria-label={label}
+      aria-label={content.label}
       data-hero-scene
+      data-scroll-cue-down-aria-label={content.scrollCue.ariaLabel}
+      data-scroll-cue-down-direction={content.scrollCue.direction}
       data-scroll-cue-mode="down"
+      data-scroll-cue-up-aria-label={content.scrollCue.upAriaLabel}
+      data-scroll-cue-up-direction={content.scrollCue.upDirection}
     >
       <div className={styles.visualLayer} aria-hidden="true">
         <div className={styles.visualFrame} data-hero-visual-frame>
@@ -102,23 +107,23 @@ export function HeroScene({
       </div>
 
       <div className={styles.contentShell}>
-        <HeroIntroInterface />
-        <HeroCapabilityInterface />
-        <HeroOperationsInterface />
-        <HeroFinalInterface />
+        <HeroIntroInterface content={content.intro} />
+        <HeroCapabilityInterface content={content.capability} />
+        <HeroOperationsInterface content={content.operations} />
+        <HeroFinalInterface content={content.final} />
       </div>
 
       <div
         className={styles.scrollCue}
-        aria-label="Scroll down to continue"
+        aria-label={content.scrollCue.ariaLabel}
         data-scroll-cue
       >
         <span className={styles.scrollCueGlyph} aria-hidden="true">
           <span className={styles.scrollCueArrow} />
         </span>
         <span className={styles.scrollCueText}>
-          <span>Scroll</span>
-          <strong data-scroll-cue-direction>Down</strong>
+          <span>{content.scrollCue.label}</span>
+          <strong data-scroll-cue-direction>{content.scrollCue.direction}</strong>
         </span>
       </div>
 

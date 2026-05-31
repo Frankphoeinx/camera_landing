@@ -1,47 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dictionary } from "@/i18n/dictionaries";
 import styles from "./HeroScene.module.css";
 
 const SLIDE_VALUE_DURATION_MS = 420;
-
-const statusDefinitions = [
-  {
-    label: "Perimeter",
-    values: ["Armed", "Guard", "Armed", "Clear"],
-  },
-  {
-    label: "Solar charge",
-    values: ["96%", "97%", "96%", "96%"],
-  },
-  {
-    label: "Night vision",
-    values: ["Active", "IR on", "Active", "Clear"],
-  },
-  {
-    label: "PTZ sweep",
-    values: ["Ready", "S-12", "S-27", "Home"],
-  },
-];
-
-const telemetryDefinitions = [
-  {
-    id: "gate",
-    values: ["West gate", "Gate scan 02", "West gate"],
-  },
-  {
-    id: "motion",
-    values: ["Motion clear", "Scan clear", "Path clear"],
-  },
-  {
-    id: "seal",
-    values: ["IP66 sealed", "Rain ok", "IP66 sealed"],
-  },
-  {
-    id: "preview",
-    values: ["24 fps live", "25 fps live", "24 fps live"],
-  },
-];
 
 function formatElapsedTime(totalSeconds: number) {
   const hours = Math.floor(totalSeconds / 3600);
@@ -179,7 +142,11 @@ function SlidingValue({
   );
 }
 
-export function HeroLiveStatus() {
+type HeroLiveStatusProps = {
+  content: Dictionary["hero"]["intro"]["liveStatus"];
+};
+
+export function HeroLiveStatus({ content }: HeroLiveStatusProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
@@ -197,27 +164,28 @@ export function HeroLiveStatus() {
 
   const liveStatuses = useMemo(
     () =>
-      statusDefinitions.map((status, index) => ({
+      content.statuses.map((status, index) => ({
         label: status.label,
+        slideByCharacter: status.slideByCharacter,
         value: status.values[(statusPhase + index) % status.values.length],
       })),
-    [statusPhase],
+    [content.statuses, statusPhase],
   );
 
   const liveTelemetry = useMemo(
     () =>
-      telemetryDefinitions.map((item, index) => ({
+      content.telemetry.map((item, index) => ({
         id: item.id,
         value: item.values[(telemetryPhase + index) % item.values.length],
       })),
-    [telemetryPhase],
+    [content.telemetry, telemetryPhase],
   );
 
   return (
     <>
       <div className={styles.statusDock} data-hud-item>
         <div className={styles.statusHeader} aria-hidden="true">
-          <span>Live security state</span>
+          <span>{content.header}</span>
           <SlidingValue
             className={styles.statusClock}
             slideByCharacter
@@ -225,7 +193,7 @@ export function HeroLiveStatus() {
           />
         </div>
 
-        <div className={styles.statusStack} aria-label="Live system status">
+        <div className={styles.statusStack} aria-label={content.statusAriaLabel}>
           {liveStatuses.map((status, index) => (
             <div
               className={styles.statusRow}
@@ -246,7 +214,7 @@ export function HeroLiveStatus() {
               <span className={styles.statusLabel}>{status.label}</span>
               <SlidingValue
                 className={styles.statusValue}
-                slideByCharacter={status.label === "Solar charge"}
+                slideByCharacter={status.slideByCharacter}
                 value={status.value}
               />
             </div>
@@ -254,7 +222,7 @@ export function HeroLiveStatus() {
         </div>
       </div>
 
-      <ul className={styles.telemetryList} aria-label="Compact telemetry">
+      <ul className={styles.telemetryList} aria-label={content.telemetryAriaLabel}>
         {liveTelemetry.map((item, index) => (
           <li className={styles.telemetryItem} key={item.id} data-telemetry-item>
             <span

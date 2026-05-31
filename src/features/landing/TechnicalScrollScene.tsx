@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import type { Dictionary } from "@/i18n/dictionaries";
 import { TechnicalScrollController } from "./TechnicalScrollController";
 import {
   outdoorCameraModels,
@@ -8,6 +9,7 @@ import {
 import styles from "./LandingSections.module.css";
 
 type TechnicalScrollSceneProps = {
+  content: Dictionary["technical"];
   mp4Src: string;
   poster: string;
   reverseMp4Src: string;
@@ -16,17 +18,37 @@ type TechnicalScrollSceneProps = {
 };
 
 export function TechnicalScrollScene({
+  content,
   mp4Src,
   poster,
   reverseMp4Src,
   reverseWebmSrc,
   webmSrc,
 }: TechnicalScrollSceneProps) {
+  const localizedSteps = technicalSteps.map((step, index) => ({
+    ...step,
+    ...(content.steps[index] ?? {}),
+  }));
+  const localizedModels = outdoorCameraModels.map((model, index) => {
+    const modelContent = content.models[index];
+
+    return {
+      ...model,
+      ...(modelContent ?? {}),
+      code: model.code,
+      imageSrc: model.imageSrc,
+      steps: model.steps.map((step, stepIndex) => ({
+        ...step,
+        ...(modelContent?.steps[stepIndex] ?? {}),
+      })),
+    };
+  });
+
   return (
     <section
       className={styles.technicalSection}
       id="system"
-      aria-label="Technical walkthrough"
+      aria-label={content.ariaLabel}
       data-active-step="1"
       data-active-model="1"
       data-active-model-step="1"
@@ -65,7 +87,7 @@ export function TechnicalScrollScene({
           <source src={reverseMp4Src} type="video/mp4" />
         </video>
         <div className={styles.cameraModelMediaStack} data-camera-model-media>
-          {outdoorCameraModels.map((model, index) => (
+          {localizedModels.map((model, index) => (
             <Image
               className={styles.cameraModelMedia}
               src={model.imageSrc}
@@ -87,11 +109,11 @@ export function TechnicalScrollScene({
       <div className={styles.technicalShell}>
         <div className={styles.technicalStepperGroup} data-technical-stepper>
           <h2 className={styles.technicalSectionLabel}>
-            SOLAR SENTINEL / VILLA PERIMETER
+            {content.sectionLabel}
           </h2>
           <div
             className={styles.technicalTimeline}
-            aria-label="Technical walkthrough steps"
+            aria-label={content.timelineAriaLabel}
           >
             <div className={styles.technicalCounter}>
               <span data-technical-current>01</span>
@@ -107,7 +129,7 @@ export function TechnicalScrollScene({
               />
             </div>
             <ol className={styles.technicalStepList}>
-              {technicalSteps.map((step, index) => (
+              {localizedSteps.map((step, index) => (
                 <li
                   data-active={index === 0}
                   data-complete="false"
@@ -127,11 +149,11 @@ export function TechnicalScrollScene({
         <div
           className={styles.cameraModelInterface}
           aria-hidden="true"
-          aria-label="Outdoor camera model details"
+          aria-label={content.modelsAriaLabel}
           aria-live="polite"
           data-camera-model-interface
         >
-          {outdoorCameraModels.map((model, modelIndex) => (
+          {localizedModels.map((model, modelIndex) => (
             <div
               className={styles.cameraModelWalkthrough}
               data-active={modelIndex === 0}
@@ -144,7 +166,7 @@ export function TechnicalScrollScene({
               </h2>
               <div
                 className={styles.cameraModelTimeline}
-                aria-label={`${model.name} technical steps`}
+                aria-label={`${model.name} ${content.modelStepsLabel}`}
               >
                 <div className={styles.cameraModelCounter}>
                   <span data-camera-model-step-current>01</span>

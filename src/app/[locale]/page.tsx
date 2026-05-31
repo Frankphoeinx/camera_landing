@@ -1,10 +1,33 @@
-import { HeroScene } from "@/features/hero";
-import { InstallationSection, TechnicalScrollScene } from "@/features/landing";
+import { notFound } from "next/navigation";
 
-export default function Home() {
+import { HeroLanguageSwitcher, HeroScene } from "@/features/hero";
+import { InstallationSection, TechnicalScrollScene } from "@/features/landing";
+import { hasLocale } from "@/i18n/config";
+import { getDictionary } from "@/i18n/dictionaries";
+
+type HomePageProps = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
+
+export default async function Home({ params }: HomePageProps) {
+  const { locale } = await params;
+
+  if (!hasLocale(locale)) {
+    notFound();
+  }
+
+  const dictionary = getDictionary(locale);
+
   return (
-    <main aria-label="Camera landing">
+    <main aria-label={dictionary.mainAriaLabel}>
+      <HeroLanguageSwitcher
+        ariaLabel={dictionary.hero.languageSwitcherAriaLabel}
+        currentLocale={locale}
+      />
       <HeroScene
+        content={dictionary.hero}
         src="/media/videos/hero-arrival.7fdafa75.mp4"
         srcWebm="/media/videos/hero-arrival.774f4cc9.webm"
         reverseSrc="/media/videos/hero-arrival-reverse.430d00d5.mp4"
@@ -15,8 +38,9 @@ export default function Home() {
         reverseToOperationsSrcWebm="/media/videos/hero-arrival-reverse-final-to-10.35fadbe2.webm"
         poster="/media/images/hero-arrival-poster.86331ef3.webp"
       />
-      <InstallationSection />
+      <InstallationSection content={dictionary.installation} />
       <TechnicalScrollScene
+        content={dictionary.technical}
         mp4Src="/media/videos/camera-technical.ff528cc4.mp4"
         reverseMp4Src="/media/videos/camera-technical-reverse.9c204762.mp4"
         reverseWebmSrc="/media/videos/camera-technical-reverse.1c12908a.webm"

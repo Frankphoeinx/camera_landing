@@ -1,120 +1,93 @@
+import type { Dictionary } from "@/i18n/dictionaries";
 import styles from "./HeroScene.module.css";
 
-const operationPanels = [
+const operationPanelChrome = [
   {
-    id: "patrol",
     className: styles.operationsPanelPatrol,
     traceClassName: styles.operationsTracePatrol,
     markerClassName: styles.operationsMarkerPatrol,
     videoAnchor: { x: 0.314, y: 0.307 },
-    eyebrow: "AUTO PATROL",
-    title: "Preset routes across blind zones",
-    copy: "Cycles gate, driveway, garden edge, and terrace views without waiting for manual control.",
-    metric: "12 patrol points",
-    confidence: "94%",
-    stats: [
-      { label: "Route", value: "A-04" },
-      { label: "Sweep", value: "355 deg" },
-      { label: "Return", value: "8 sec" },
-    ],
-    tags: ["Solar hold", "Edge scan", "Auto home"],
   },
   {
-    id: "alerts",
     className: styles.operationsPanelAlerts,
     traceClassName: styles.operationsTraceAlerts,
     markerClassName: styles.operationsMarkerAlerts,
     videoAnchor: { x: 0.23, y: 0.536 },
-    eyebrow: "SMART ALERTS",
-    title: "Zone-based event escalation",
-    copy: "Separates driveway approach, perimeter crossing, and loitering before sending a priority alert.",
-    metric: "3 alert tiers",
-    confidence: "91%",
-    stats: [
-      { label: "Zones", value: "06" },
-      { label: "Filter", value: "AI" },
-      { label: "Delay", value: "0.4s" },
-    ],
-    tags: ["Human", "Vehicle", "Loiter"],
   },
   {
-    id: "archive",
     className: styles.operationsPanelArchive,
     traceClassName: styles.operationsTraceArchive,
     markerClassName: styles.operationsMarkerArchive,
     videoAnchor: { x: 0.298, y: 0.589 },
-    eyebrow: "EVENT MEMORY",
-    title: "Encrypted local and cloud history",
-    copy: "Stores verified clips with timestamp, zone, subject type, and patrol state for fast review.",
-    metric: "30 day archive",
-    confidence: "100%",
-    stats: [
-      { label: "Clips", value: "128" },
-      { label: "Sync", value: "Live" },
-      { label: "Mode", value: "Dual" },
-    ],
-    tags: ["Local SD", "Cloud copy", "Timecode"],
   },
 ];
 
-export function HeroOperationsInterface() {
+type HeroOperationsInterfaceProps = {
+  content: Dictionary["hero"]["operations"];
+};
+
+export function HeroOperationsInterface({ content }: HeroOperationsInterfaceProps) {
   return (
     <aside
       className={`${styles.capabilityOverlay} ${styles.operationsOverlay}`}
-      aria-label="Camera operations overview"
+      aria-label={content.ariaLabel}
       data-operations-root
     >
-      {operationPanels.map((panel) => (
-        <section
-          className={`${styles.capabilityPanel} ${styles.operationsPanel} ${panel.className}`}
-          data-operations-panel
-          key={panel.id}
-        >
-          <span
-            className={`${styles.capabilityTraceGroup} ${panel.traceClassName}`}
-            data-video-anchor-x={panel.videoAnchor.x}
-            data-video-anchor-y={panel.videoAnchor.y}
-            aria-hidden="true"
+      {content.panels.map((panel, index) => {
+        const chrome = operationPanelChrome[index] ?? operationPanelChrome[0];
+
+        return (
+          <section
+            className={`${styles.capabilityPanel} ${styles.operationsPanel} ${chrome.className}`}
+            data-operations-panel
+            key={panel.id}
           >
-            <span className={styles.capabilityTrace} data-operations-trace />
             <span
-              className={`${styles.capabilityMarker} ${panel.markerClassName}`}
-              data-operations-marker
-            />
-          </span>
-          <span className={styles.capabilitySweep} data-operations-sweep />
-          <span className={styles.capabilityEyebrow}>{panel.eyebrow}</span>
-          <strong className={styles.capabilityTitle}>{panel.title}</strong>
-          <span className={styles.capabilityCopy}>{panel.copy}</span>
+              className={`${styles.capabilityTraceGroup} ${chrome.traceClassName}`}
+              data-video-anchor-x={chrome.videoAnchor.x}
+              data-video-anchor-y={chrome.videoAnchor.y}
+              aria-hidden="true"
+            >
+              <span className={styles.capabilityTrace} data-operations-trace />
+              <span
+                className={`${styles.capabilityMarker} ${chrome.markerClassName}`}
+                data-operations-marker
+              />
+            </span>
+            <span className={styles.capabilitySweep} data-operations-sweep />
+            <span className={styles.capabilityEyebrow}>{panel.eyebrow}</span>
+            <strong className={styles.capabilityTitle}>{panel.title}</strong>
+            <span className={styles.capabilityCopy}>{panel.copy}</span>
 
-          <div className={styles.operationsStats} aria-hidden="true">
-            {panel.stats.map((stat) => (
-              <span className={styles.operationsStat} key={stat.label}>
-                <span>{stat.label}</span>
-                <strong>{stat.value}</strong>
+            <div className={styles.operationsStats} aria-hidden="true">
+              {panel.stats.map((stat) => (
+                <span className={styles.operationsStat} key={stat.label}>
+                  <span>{stat.label}</span>
+                  <strong>{stat.value}</strong>
+                </span>
+              ))}
+            </div>
+
+            <div className={styles.operationsMeter} aria-hidden="true">
+              <span className={styles.operationsMeterLabel}>
+                {content.meterLabel}
               </span>
-            ))}
-          </div>
+              <strong>{panel.confidence}</strong>
+              <span className={styles.operationsMeterTrack}>
+                <span className={styles.operationsMeterFill} />
+              </span>
+            </div>
 
-          <div className={styles.operationsMeter} aria-hidden="true">
-            <span className={styles.operationsMeterLabel}>
-              Signal confidence
-            </span>
-            <strong>{panel.confidence}</strong>
-            <span className={styles.operationsMeterTrack}>
-              <span className={styles.operationsMeterFill} />
-            </span>
-          </div>
+            <div className={styles.operationsTags} aria-hidden="true">
+              {panel.tags.map((tag) => (
+                <span key={tag}>{tag}</span>
+              ))}
+            </div>
 
-          <div className={styles.operationsTags} aria-hidden="true">
-            {panel.tags.map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </div>
-
-          <span className={styles.capabilityMetric}>{panel.metric}</span>
-        </section>
-      ))}
+            <span className={styles.capabilityMetric}>{panel.metric}</span>
+          </section>
+        );
+      })}
     </aside>
   );
 }

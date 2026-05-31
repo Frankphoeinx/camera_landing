@@ -82,7 +82,7 @@ const parseObjectPositionAxis = (
   return 0.5;
 };
 
-const scrollCueCopy = {
+const fallbackScrollCueCopy = {
   down: {
     ariaLabel: "Scroll down to continue",
     direction: "Down",
@@ -152,6 +152,9 @@ export function HeroSceneController() {
     const scrollCueDirectionElement = root.querySelector<HTMLElement>(
       "[data-scroll-cue-direction]",
     );
+    const languageSwitcherElement = document.querySelector<HTMLElement>(
+      "[data-language-switcher]",
+    );
     const detailOverlayRoots: Record<
       DetailOverlayKind,
       HTMLElement | null | undefined
@@ -198,7 +201,25 @@ export function HeroSceneController() {
     const warnedTransitionFailures = new Set<string>();
 
     const showScrollCue = (mode: Exclude<ScrollCueMode, "hidden">) => {
-      const scrollCue = scrollCueCopy[mode];
+      const fallbackScrollCue = fallbackScrollCueCopy[mode];
+      const scrollCue =
+        mode === "down"
+          ? {
+              ariaLabel:
+                root.dataset.scrollCueDownAriaLabel ??
+                fallbackScrollCue.ariaLabel,
+              direction:
+                root.dataset.scrollCueDownDirection ??
+                fallbackScrollCue.direction,
+            }
+          : {
+              ariaLabel:
+                root.dataset.scrollCueUpAriaLabel ??
+                fallbackScrollCue.ariaLabel,
+              direction:
+                root.dataset.scrollCueUpDirection ??
+                fallbackScrollCue.direction,
+            };
 
       root.dataset.scrollCueMode = mode;
 
@@ -213,6 +234,48 @@ export function HeroSceneController() {
 
     const hideScrollCue = () => {
       root.dataset.scrollCueMode = "hidden";
+    };
+
+    const setLanguageSwitcherHidden = (isHidden: boolean) => {
+      if (!languageSwitcherElement) {
+        return;
+      }
+
+      languageSwitcherElement.dataset.videoPlaying = isHidden
+        ? "true"
+        : "false";
+
+      const focusableElements =
+        languageSwitcherElement.querySelectorAll<HTMLElement>("a, button");
+
+      if (isHidden) {
+        languageSwitcherElement.setAttribute("aria-hidden", "true");
+
+        if (
+          document.activeElement instanceof HTMLElement &&
+          languageSwitcherElement.contains(document.activeElement)
+        ) {
+          document.activeElement.blur();
+        }
+
+        focusableElements.forEach((element) => {
+          element.tabIndex = -1;
+        });
+        return;
+      }
+
+      languageSwitcherElement.removeAttribute("aria-hidden");
+      focusableElements.forEach((element) => {
+        element.removeAttribute("tabindex");
+      });
+    };
+
+    const hideLanguageSwitcher = () => {
+      setLanguageSwitcherHidden(true);
+    };
+
+    const showLanguageSwitcher = () => {
+      setLanguageSwitcherHidden(false);
     };
 
     const cancelForwardStopMonitor = () => {
@@ -1231,6 +1294,7 @@ export function HeroSceneController() {
       }
 
       videoStepRef.current = transition.targetStep;
+      showLanguageSwitcher();
       showScrollCue(transition.targetStep === "final" ? "up" : "down");
       unlockPageScroll();
     };
@@ -1355,13 +1419,14 @@ export function HeroSceneController() {
             return;
           }
 
-            videoStepRef.current = "capability";
-            prepareForwardFrame(HERO_CAPABILITY_TIME_SECONDS);
-            showDetailOverlay("capability");
-            showScrollCue("down");
-            unlockPageScroll();
-            cancelTransitionWatchdog();
-          });
+          videoStepRef.current = "capability";
+          prepareForwardFrame(HERO_CAPABILITY_TIME_SECONDS);
+          showDetailOverlay("capability");
+          showLanguageSwitcher();
+          showScrollCue("down");
+          unlockPageScroll();
+          cancelTransitionWatchdog();
+        });
       });
     };
 
@@ -1385,6 +1450,7 @@ export function HeroSceneController() {
             videoStepRef.current = "operations";
             prepareForwardFrame(HERO_OPERATIONS_TIME_SECONDS);
             showDetailOverlay("operations");
+            showLanguageSwitcher();
             showScrollCue("down");
             unlockPageScroll();
             cancelTransitionWatchdog();
@@ -1410,6 +1476,7 @@ export function HeroSceneController() {
             videoStepRef.current = "final";
             prepareForwardFrame(HERO_FINAL_TIME_SECONDS);
             showDetailOverlay("final");
+            showLanguageSwitcher();
             showScrollCue("up");
             unlockPageScroll();
             cancelTransitionWatchdog();
@@ -1435,6 +1502,7 @@ export function HeroSceneController() {
           }
 
           videoStepRef.current = "start";
+          showLanguageSwitcher();
           showHud();
           showScrollCue("down");
           unlockPageScroll();
@@ -1499,6 +1567,7 @@ export function HeroSceneController() {
         });
 
       showForwardVideo();
+      showLanguageSwitcher();
       showScrollCue("down");
       scheduleInitialForwardWarmup();
     };
@@ -1595,6 +1664,7 @@ export function HeroSceneController() {
 
       videoStepRef.current = "playingToCapability";
       hideScrollCue();
+      hideLanguageSwitcher();
       lockPageScroll();
       hideAllDetailOverlays();
       cancelReverseStopMonitor();
@@ -1654,6 +1724,7 @@ export function HeroSceneController() {
 
       videoStepRef.current = "playingToOperations";
       hideScrollCue();
+      hideLanguageSwitcher();
       lockPageScroll();
       hideDetailOverlay("capability");
       cancelReverseStopMonitor();
@@ -1724,6 +1795,7 @@ export function HeroSceneController() {
 
       videoStepRef.current = "playingToFinal";
       hideScrollCue();
+      hideLanguageSwitcher();
       lockPageScroll();
       hideDetailOverlay("operations");
       cancelReverseStopMonitor();
@@ -1796,6 +1868,7 @@ export function HeroSceneController() {
 
       videoStepRef.current = "reversingToStart";
       hideScrollCue();
+      hideLanguageSwitcher();
       lockPageScroll();
       hideDetailOverlay("capability");
       cancelForwardStopMonitor();
@@ -1850,6 +1923,7 @@ export function HeroSceneController() {
 
       videoStepRef.current = "reversingToCapability";
       hideScrollCue();
+      hideLanguageSwitcher();
       lockPageScroll();
       hideDetailOverlay("operations");
       cancelForwardStopMonitor();
@@ -1904,6 +1978,7 @@ export function HeroSceneController() {
 
       videoStepRef.current = "reversingToOperations";
       hideScrollCue();
+      hideLanguageSwitcher();
       lockPageScroll();
       hideDetailOverlay("final");
       cancelForwardStopMonitor();
@@ -2180,6 +2255,7 @@ export function HeroSceneController() {
       clearWheelAccumulator();
       killAllDetailOverlayTweens();
       unlockPageScroll();
+      showLanguageSwitcher();
       removeScrollListeners();
       cancelInitialForwardWarmup();
       window.removeEventListener("resize", handleAnchoredTraceLayout);

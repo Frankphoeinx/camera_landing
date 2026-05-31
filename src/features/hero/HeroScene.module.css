@@ -269,6 +269,110 @@
   text-transform: uppercase;
 }
 
+.languageSwitcher {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  opacity: 1;
+  pointer-events: auto;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.76);
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    visibility 180ms ease;
+  visibility: visible;
+}
+
+.languageSwitcher[data-video-playing="true"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.98);
+  visibility: hidden;
+}
+
+.languageOption {
+  position: relative;
+  display: inline-flex;
+  min-width: 28px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1px;
+  color: rgba(255, 247, 234, 0.58);
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  font-weight: 720;
+  letter-spacing: 0.18em;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.languageOption:hover,
+.languageOption:focus-visible {
+  color: #fff7ea;
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.languageOption[data-active="true"] {
+  color: #fff7ea;
+  opacity: 1;
+}
+
+.languageOption[data-active="true"]::after {
+  position: absolute;
+  right: 0.18em;
+  bottom: 7px;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(242, 193, 107, 0.9), transparent);
+}
+
+.languageSwitcherGlyph {
+  position: relative;
+  display: block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 30px;
+  overflow: hidden;
+}
+
+.languageSwitcherGlyph::before,
+.languageSwitcherGlyph::after {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  content: "";
+  border-right: 1px solid rgba(242, 193, 107, 0.9);
+  border-bottom: 1px solid rgba(242, 193, 107, 0.9);
+  transform: translateX(-50%) rotate(45deg);
+  animation: scrollCueArrow 1.18s ease-in-out infinite;
+}
+
+.languageSwitcherGlyph::after {
+  animation-delay: 180ms;
+}
+
+.languageOption:focus-visible {
+  outline: 2px solid rgba(242, 193, 107, 0.86);
+  outline-offset: 3px;
+}
+
 .recordingDot {
   position: relative;
   width: 7px;
@@ -1539,6 +1643,21 @@
   .systemBar {
     flex-wrap: wrap;
     gap: 10px;
+    max-width: calc(100% - 132px);
+  }
+
+  .languageSwitcher {
+    top: 10px;
+    right: 10px;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+
+  .languageOption {
+    min-width: 26px;
+    min-height: 34px;
+    font-size: 0.62rem;
   }
 
   .onlineBadge {
@@ -1874,6 +1993,10 @@
   }
 
   .visualFrame,
+  .languageSwitcher,
+  .languageOption,
+  .languageSwitcherGlyph::before,
+  .languageSwitcherGlyph::after,
   .action,
   .statusPulse,
   .telemetryDot {

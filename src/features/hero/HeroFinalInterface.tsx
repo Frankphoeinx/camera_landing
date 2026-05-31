@@ -1,46 +1,8 @@
 import { HeroTypewriterHeadline } from "./HeroTypewriterHeadline";
+import type { Dictionary } from "@/i18n/dictionaries";
 import styles from "./HeroScene.module.css";
 
-type FinalSection = {
-  detail: string;
-  eyebrow: string;
-  facts: string[];
-  title: string;
-  value: string;
-};
-
-const finalSections: FinalSection[] = [
-  {
-    eyebrow: "ESTATE COVERAGE",
-    title: "Villa perimeter watch",
-    detail: "Gate, driveway, garden, and terrace coverage.",
-    facts: ["4 active zones", "25 fps live"],
-    value: "360 deg",
-  },
-  {
-    eyebrow: "AUTONOMOUS READINESS",
-    title: "Solar patrol reserve",
-    detail: "Night optics and IP66 sealing stay online.",
-    facts: ["96% charge", "IR + LED"],
-    value: "72h",
-  },
-  {
-    eyebrow: "RESPONSE PROTOCOL",
-    title: "Alert handoff ready",
-    detail: "Owner alert, guard handoff, and evidence sync.",
-    facts: ["30 day archive", "Encrypted clips"],
-    value: "Ready",
-  },
-];
-
-const finalStatusItems = ["AI event filter", "No wiring required", "Survey ready"];
-
-const finalHeadlinePhrases = [
-  ["Estate", "command", "ready."],
-  ["Coverage", "plan", "verified."],
-  ["Alert", "handoff", "secured."],
-  ["Install", "survey", "ready."],
-];
+type FinalSection = Dictionary["hero"]["final"]["sections"][number];
 
 function FinalStatusSection({
   detail,
@@ -67,11 +29,15 @@ function FinalStatusSection({
   );
 }
 
-export function HeroFinalInterface() {
+type HeroFinalInterfaceProps = {
+  content: Dictionary["hero"]["final"];
+};
+
+export function HeroFinalInterface({ content }: HeroFinalInterfaceProps) {
   return (
     <aside
       className={`${styles.capabilityOverlay} ${styles.finalOverlay}`}
-      aria-label="Estate command overview"
+      aria-label={content.ariaLabel}
       data-final-root
     >
       <section className={styles.finalInterface}>
@@ -83,10 +49,10 @@ export function HeroFinalInterface() {
         </div>
 
         <div className={styles.finalSystemBar} data-final-panel>
-          <p className={styles.eyebrow}>SOLAR SENTINEL / ESTATE COMMAND</p>
+          <p className={styles.eyebrow}>{content.eyebrow}</p>
           <span className={styles.finalSystemBadge}>
             <span className={styles.recordingDot} />
-            Protected
+            {content.badge}
           </span>
         </div>
 
@@ -94,24 +60,21 @@ export function HeroFinalInterface() {
           <HeroTypewriterHeadline
             as="h2"
             className={styles.finalHeadline}
-            phrases={finalHeadlinePhrases}
+            phrases={content.headlinePhrases}
             rootDataAttribute="data-final-root"
             startDelayMs={280}
           />
-          <p className={styles.finalCopy}>
-            Coverage, solar reserve, and alert handoff are verified for a
-            premium outdoor install.
-          </p>
+          <p className={styles.finalCopy}>{content.copy}</p>
         </div>
 
         <div className={styles.finalCommandGrid}>
-          {finalSections.map((section) => (
+          {content.sections.map((section) => (
             <FinalStatusSection key={section.eyebrow} {...section} />
           ))}
         </div>
 
         <ul className={styles.finalStatusStrip} data-final-panel>
-          {finalStatusItems.map((item) => (
+          {content.statusItems.map((item) => (
             <li className={styles.finalStatusChip} key={item}>
               <span className={styles.telemetryDot} aria-hidden="true" />
               {item}
@@ -121,11 +84,11 @@ export function HeroFinalInterface() {
 
         <div className={styles.finalActionRow} data-final-panel>
           <a className={`${styles.action} ${styles.primaryAction}`} href="#installation">
-            <span>Book installation</span>
+            <span>{content.primaryAction}</span>
             <span className={styles.actionSheen} aria-hidden="true" />
           </a>
           <a className={`${styles.action} ${styles.secondaryAction}`} href="#system">
-            View coverage plan
+            {content.secondaryAction}
           </a>
         </div>
       </section>
